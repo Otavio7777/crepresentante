@@ -69,13 +69,25 @@ const CLIENTS = [
 ];
 const STAGES = ["Prospect","Qualificado","Proposta","Negociação","Fechamento"];
 const PRODUCTS = [
-  { id:"P01", name:"Válvula V200",           price:285,  stock:120, unit:"un" },
-  { id:"P02", name:"Rolamento 6205",          price:42,   stock:48,  unit:"un" },
-  { id:"P03", name:"Rolamento 6305",          price:58,   stock:12,  unit:"un" },
-  { id:"P04", name:"Parafuso Sextavado M12",  price:1.80, stock:5000,unit:"cx" },
-  { id:"P05", name:"Correia Dentada T5",      price:34,   stock:200, unit:"un" },
-  { id:"P06", name:"Mangueira Hidráulica 3/4",price:28.5, stock:300, unit:"mt" },
+  { id:"P01", cat:"Válvulas",    name:"Válvula V200",             price:285,   stock:120,  unit:"un", ref:"VLV-200"  },
+  { id:"P02", cat:"Válvulas",    name:"Válvula V350 Industrial",  price:490,   stock:44,   unit:"un", ref:"VLV-350"  },
+  { id:"P03", cat:"Válvulas",    name:"Válvula Esfera 1/2",     price:68,    stock:200,  unit:"un", ref:"VLV-E12"  },
+  { id:"P04", cat:"Rolamentos",  name:"Rolamento 6205",           price:42,    stock:48,   unit:"un", ref:"ROL-6205" },
+  { id:"P05", cat:"Rolamentos",  name:"Rolamento 6305",           price:58,    stock:12,   unit:"un", ref:"ROL-6305" },
+  { id:"P06", cat:"Rolamentos",  name:"Rolamento 6208 2RS",       price:74,    stock:30,   unit:"un", ref:"ROL-6208" },
+  { id:"P07", cat:"Fixação",     name:"Parafuso Sextavado M12",   price:1.80,  stock:5000, unit:"cx", ref:"PAR-M12"  },
+  { id:"P08", cat:"Fixação",     name:"Porca Sextavada M12",      price:0.90,  stock:8000, unit:"cx", ref:"PRC-M12"  },
+  { id:"P09", cat:"Fixação",     name:"Arruela Lisa M12",         price:0.40,  stock:9000, unit:"cx", ref:"ARR-M12"  },
+  { id:"P10", cat:"Transmissão", name:"Correia Dentada T5",       price:34,    stock:200,  unit:"un", ref:"COR-T5"   },
+  { id:"P11", cat:"Transmissão", name:"Polia Alumínio 80mm",      price:87,    stock:60,   unit:"un", ref:"POL-080"  },
+  { id:"P12", cat:"Hidráulico",  name:"Mangueira Hidráulica 3/4", price:28.5,  stock:300,  unit:"mt", ref:"MAN-34"   },
+  { id:"P13", cat:"Hidráulico",  name:"Conector Reto 3/4",      price:12,    stock:400,  unit:"un", ref:"CON-34"   },
+  { id:"P14", cat:"Elétrico",    name:"Cabo PP 2x2.5mm",          price:8.90,  stock:1000, unit:"mt", ref:"CAB-225"  },
+  { id:"P15", cat:"Elétrico",    name:"Disjuntor DIN 20A",        price:32,    stock:150,  unit:"un", ref:"DIS-20A"  },
 ];
+const PRODUCT_CATS = ["Todos", ...new Set(PRODUCTS.map(p=>p.cat))];
+const PAYMENT_TERMS = ["À vista","7 dias","14 dias","21 dias","28 dias","30/60","30/60/90","45/90/135"];
+const DELIVERY_OPTIONS = ["Retirada","3 dias úteis","5 dias úteis","7 dias úteis","10 dias úteis","15 dias úteis","A combinar"];
 const CHATS = {
   1:[
     { from:"c", text:"Bom dia! Preciso do orçamento daquelas válvulas industriais.", time:"09:14" },
@@ -392,6 +404,406 @@ const CLIENT_CHART = {
 // ─────────────────────────────────────────────
 // PAGE: CONVERSAS
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// PEDIDO ASSISTIDO — painel completo
+// ─────────────────────────────────────────────
+function PedidoPanel({ ac, orderQty, setOrderQty, discount, setDiscount, pedHist, send }) {
+  const [step, setStep]         = useState("produtos"); // produtos | resumo | condicoes
+  const [search, setSearch]     = useState("");
+  const [activeCat, setActiveCat] = useState("Todos");
+  const [payment, setPayment]   = useState("30/60");
+  const [delivery, setDelivery] = useState("5 dias úteis");
+  const [notes, setNotes]       = useState("");
+  const [lineDisc, setLineDisc] = useState({});      // desconto por linha
+
+  const filtered = PRODUCTS.filter(p =>
+    (activeCat === "Todos" || p.cat === activeCat) &&
+    (p.name.toLowerCase().includes(search.toLowerCase()) ||
+     p.ref.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const orderLines = Object.entries(orderQty).filter(([,q]) => q > 0);
+  const subtotal   = orderLines.reduce((a, [id, q]) => {
+    const p = PRODUCTS.find(x => x.id === id);
+    const ld = lineDisc[id] || 0;
+    return a + p.price * q * (1 - ld / 100);
+  }, 0);
+  const totalDisc  = subtotal * (1 - discount / 100);
+  const totalItems = orderLines.reduce((a, [, q]) => a + q, 0);
+
+  const stepLabel = { produtos: "1. Produtos", resumo: "2. Resumo", condicoes: "3. Condições" };
+
+  const sendOrder = () => {
+    const lines = orderLines.map(([id, q]) => {
+      const p   = PRODUCTS.find(x => x.id === id);
+      const ld  = lineDisc[id] || 0;
+      const val = p.price * q * (1 - ld / 100);
+      return `• ${q}x ${p.name}${ld > 0 ? ` (desc. ${ld}%)` : ""} — ${fmt(val)}`;
+    });
+    const discText  = discount > 0 ? `\nDesconto geral: ${discount}%` : "";
+    const notesText = notes ? `\nObs: ${notes}` : "";
+    send(
+      `Pedido #${Math.floor(Math.random()*1000)+2900} — ${ac?.name}\n` +
+      lines.join("\n") + discText +
+      `\n\nTotal: ${fmt(totalDisc)}` +
+      `\nPagamento: ${payment} · Entrega: ${delivery}` +
+      notesText +
+      `\n\nEnviado ao ERP automaticamente.`
+    );
+    setOrderQty({});
+    setLineDisc({});
+    setDiscount(0);
+    setNotes("");
+    setStep("produtos");
+  };
+
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+
+      {/* Cabeçalho do pedido */}
+      <div style={{ background:B[800], padding:"12px 16px" }}>
+        <div style={{ fontSize:10, color:B[300], letterSpacing:.8, textTransform:"uppercase", marginBottom:3 }}>Pedido assistido</div>
+        <div style={{ fontSize:12, fontWeight:700, color:B[0] }}>{ac?.name}</div>
+        <div style={{ fontSize:10, color:B[400], marginTop:1 }}>{ac?.city} · {ac?.stage}</div>
+      </div>
+
+      {/* Steps nav */}
+      <div style={{ display:"flex", borderBottom:`1px solid ${B[150]}`, background:B[0] }}>
+        {["produtos","resumo","condicoes"].map((s, i) => (
+          <button key={s} onClick={() => orderLines.length > 0 || s === "produtos" ? setStep(s) : null}
+            style={{
+              flex:1, padding:"9px 4px", background:"none", border:"none", cursor:"pointer",
+              fontSize:9, fontWeight:700, letterSpacing:.4, textTransform:"uppercase",
+              color:       step === s ? B[500] : B[400],
+              borderBottom: step === s ? `2px solid ${B[500]}` : "2px solid transparent",
+              marginBottom:-1,
+              opacity: (s !== "produtos" && orderLines.length === 0) ? 0.35 : 1,
+            }}>
+            <div style={{ fontSize:14, fontWeight:800, color: step === s ? B[500] : B[300], marginBottom:2 }}>{i+1}</div>
+            {s === "produtos" ? "Produtos" : s === "resumo" ? "Resumo" : "Condições"}
+          </button>
+        ))}
+      </div>
+
+      {/* ── STEP 1: PRODUTOS ── */}
+      {step === "produtos" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+
+          {/* Busca */}
+          <div style={{ padding:"10px 12px", borderBottom:`1px solid ${B[100]}` }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:"6px 10px" }}>
+              {Ic.search(13)}
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar produto ou referência..."
+                style={{ border:"none", background:"none", outline:"none", fontSize:11, color:B[800], flex:1, fontFamily:"inherit" }}
+              />
+            </div>
+          </div>
+
+          {/* Categorias */}
+          <div style={{ display:"flex", gap:0, overflowX:"auto", borderBottom:`1px solid ${B[100]}`, padding:"0 12px" }}>
+            {PRODUCT_CATS.map(cat => (
+              <button key={cat} onClick={() => setActiveCat(cat)} style={{
+                padding:"7px 10px", background:"none", border:"none", cursor:"pointer", whiteSpace:"nowrap",
+                fontSize:10, fontWeight:700, letterSpacing:.4,
+                color:       activeCat === cat ? B[500] : B[500],
+                borderBottom: activeCat === cat ? `2px solid ${B[500]}` : "2px solid transparent",
+                marginBottom:-1,
+                opacity:     activeCat === cat ? 1 : 0.4,
+              }}>{cat}</button>
+            ))}
+          </div>
+
+          {/* Lista de produtos */}
+          <div style={{ flex:1, overflowY:"auto" }}>
+            {filtered.map((p, i) => {
+              const qty = orderQty[p.id] || 0;
+              const lowStock = p.stock < 20;
+              return (
+                <div key={p.id} style={{
+                  padding:"10px 12px",
+                  borderBottom:`1px solid ${B[100]}`,
+                  background: qty > 0 ? B[50] : B[0],
+                  borderLeft: qty > 0 ? `3px solid ${B[500]}` : "3px solid transparent",
+                }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:B[800], lineHeight:1.3 }}>{p.name}</div>
+                      <div style={{ display:"flex", gap:8, marginTop:2, alignItems:"center" }}>
+                        <span style={{ fontSize:9, color:B[500], fontFamily:"monospace" }}>{p.ref}</span>
+                        <span style={{ fontSize:9, color: lowStock ? "#B45309" : B[400] }}>
+                          {lowStock ? `⚠ ${p.stock} em estoque` : `Estoque: ${p.stock} ${p.unit}`}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right", flexShrink:0, marginLeft:8 }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:B[700], fontVariantNumeric:"tabular-nums" }}>{fmt(p.price)}</div>
+                      <div style={{ fontSize:9, color:B[400] }}>/{p.unit}</div>
+                    </div>
+                  </div>
+
+                  {/* Controles de quantidade */}
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <button
+                      onClick={() => setOrderQty(q => ({ ...q, [p.id]: Math.max(0, (q[p.id]||0) - 1) }))}
+                      style={{ width:24, height:24, background:B[100], border:`1px solid ${B[200]}`, color:B[700], cursor:"pointer", fontWeight:900, fontSize:15, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>−</button>
+                    <input
+                      value={qty || ""}
+                      onChange={e => setOrderQty(q => ({ ...q, [p.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      placeholder="0"
+                      style={{ width:38, textAlign:"center", border:`1px solid ${qty>0?B[400]:B[200]}`, padding:"3px 0", fontSize:12, fontWeight:800, color:B[800], background:B[0], outline:"none", fontFamily:"monospace" }}
+                    />
+                    <button
+                      onClick={() => setOrderQty(q => ({ ...q, [p.id]: (q[p.id]||0) + 1 }))}
+                      style={{ width:24, height:24, background: qty>0?B[500]:B[200], border:"none", color:B[0], cursor:"pointer", fontWeight:900, fontSize:15, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>+</button>
+                    {qty > 0 && (
+                      <span style={{ marginLeft:"auto", fontSize:11, fontWeight:800, color:B[600], fontVariantNumeric:"tabular-nums" }}>
+                        = {fmt(p.price * qty)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div style={{ padding:"32px 16px", textAlign:"center", color:B[400], fontSize:12 }}>
+                Nenhum produto encontrado
+              </div>
+            )}
+          </div>
+
+          {/* Footer com resumo e botão avançar */}
+          {orderLines.length > 0 && (
+            <div style={{ borderTop:`2px solid ${B[500]}`, background:B[800], padding:"12px 14px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <div style={{ fontSize:10, color:B[300] }}>{totalItems} item{totalItems!==1?"s":""} selecionado{totalItems!==1?"s":""}</div>
+                <div style={{ fontSize:14, fontWeight:800, color:B[0], fontVariantNumeric:"tabular-nums" }}>{fmt(subtotal)}</div>
+              </div>
+              <button onClick={() => setStep("resumo")} style={{
+                padding:"8px 16px", background:B[500], color:B[0], border:"none",
+                fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:.4,
+                display:"flex", alignItems:"center", gap:6
+              }}>
+                Resumo {Ic.chevR(13)}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 2: RESUMO ── */}
+      {step === "resumo" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          <div style={{ flex:1, overflowY:"auto" }}>
+
+            {/* Itens */}
+            <div style={{ padding:"10px 0" }}>
+              {orderLines.map(([id, q]) => {
+                const p   = PRODUCTS.find(x => x.id === id);
+                const ld  = lineDisc[id] || 0;
+                const val = p.price * q * (1 - ld / 100);
+                return (
+                  <div key={id} style={{ padding:"10px 14px", borderBottom:`1px solid ${B[100]}` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:B[800] }}>{p.name}</div>
+                        <div style={{ fontSize:10, color:B[500] }}>{p.ref} · {fmt(p.price)}/{p.unit}</div>
+                      </div>
+                      <button
+                        onClick={() => setOrderQty(q2 => { const n={...q2}; delete n[id]; return n; })}
+                        style={{ background:"none", border:"none", color:B[400], cursor:"pointer", fontSize:14, lineHeight:1, padding:"0 2px" }}>×</button>
+                    </div>
+
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      {/* Qtd */}
+                      <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                        <button onClick={() => setOrderQty(q2 => ({ ...q2, [id]: Math.max(1, q-1) }))}
+                          style={{ width:20, height:20, background:B[100], border:`1px solid ${B[200]}`, color:B[700], cursor:"pointer", fontWeight:900, fontSize:13, display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+                        <span style={{ fontSize:12, fontWeight:800, color:B[800], minWidth:24, textAlign:"center", fontFamily:"monospace" }}>{q}</span>
+                        <button onClick={() => setOrderQty(q2 => ({ ...q2, [id]: q+1 }))}
+                          style={{ width:20, height:20, background:B[500], border:"none", color:B[0], cursor:"pointer", fontWeight:900, fontSize:13, display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+                      </div>
+
+                      {/* Desconto por linha */}
+                      <div style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
+                        <span style={{ fontSize:9, color:B[500] }}>Desc.</span>
+                        <select
+                          value={ld}
+                          onChange={e => setLineDisc(d => ({ ...d, [id]: Number(e.target.value) }))}
+                          style={{ border:`1px solid ${B[200]}`, background:B[50], fontSize:10, fontWeight:700, color:B[700], padding:"2px 4px", outline:"none" }}>
+                          {[0,3,5,8,10,12,15].map(d => <option key={d} value={d}>{d}%</option>)}
+                        </select>
+                      </div>
+
+                      <div style={{ fontSize:12, fontWeight:800, color:B[700], fontVariantNumeric:"tabular-nums", minWidth:70, textAlign:"right" }}>{fmt(val)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desconto geral */}
+            <div style={{ padding:"12px 14px", borderTop:`1px solid ${B[150]}`, borderBottom:`1px solid ${B[150]}` }}>
+              <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Desconto geral do pedido</div>
+              <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                {[0,3,5,8,10,12,15].map(d => (
+                  <button key={d} onClick={() => setDiscount(d)} style={{
+                    padding:"5px 10px", fontSize:11, fontWeight:700, cursor:"pointer",
+                    background: discount===d ? B[800] : B[50],
+                    color:      discount===d ? B[0]   : B[600],
+                    border:     `1px solid ${discount===d ? B[800] : B[200]}`,
+                  }}>{d}%</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Totais */}
+            <div style={{ padding:"12px 14px", background:B[50] }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:B[600], marginBottom:6 }}>
+                <span>Subtotal</span><span style={{ fontVariantNumeric:"tabular-nums" }}>{fmt(subtotal)}</span>
+              </div>
+              {discount > 0 && (
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:B[500], marginBottom:6 }}>
+                  <span>Desconto geral ({discount}%)</span><span>− {fmt(subtotal * discount / 100)}</span>
+                </div>
+              )}
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:15, fontWeight:900, color:B[800], paddingTop:8, borderTop:`2px solid ${B[300]}`, marginTop:4 }}>
+                <span>Total</span><span style={{ fontVariantNumeric:"tabular-nums" }}>{fmt(totalDisc)}</span>
+              </div>
+            </div>
+
+            {/* Histórico */}
+            {pedHist.length > 0 && (
+              <div style={{ padding:"12px 14px", borderTop:`1px solid ${B[100]}` }}>
+                <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Pedidos anteriores</div>
+                {pedHist.map((p, i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:i<pedHist.length-1?`1px solid ${B[100]}`:undefined }}>
+                    <div>
+                      <div style={{ fontSize:11, fontWeight:700, color:B[500] }}>{p.num}</div>
+                      <div style={{ fontSize:10, color:B[500] }}>{p.date}</div>
+                    </div>
+                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:B[800], fontVariantNumeric:"tabular-nums" }}>{fmt(p.val)}</span>
+                      <span style={{ fontSize:9, fontWeight:800, padding:"2px 6px", textTransform:"uppercase",
+                        background: p.origin==="erp"?B[800]:B[150], color: p.origin==="erp"?B[0]:B[600] }}>
+                        {p.origin==="erp"?"ERP":"Site"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ borderTop:`1px solid ${B[150]}`, padding:"10px 14px", display:"flex", gap:6, background:B[0] }}>
+            <button onClick={() => setStep("produtos")} style={{ padding:"8px 12px", background:B[50], color:B[600], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+              {Ic.chevL(12)} Voltar
+            </button>
+            <button onClick={() => setStep("condicoes")} style={{ flex:1, padding:"8px", background:B[500], color:B[0], border:"none", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+              Condições {Ic.chevR(12)}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 3: CONDIÇÕES ── */}
+      {step === "condicoes" && (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"14px" }}>
+
+            {/* Pagamento */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Condição de pagamento</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:5 }}>
+                {PAYMENT_TERMS.map(t => (
+                  <button key={t} onClick={() => setPayment(t)} style={{
+                    padding:"8px 6px", fontSize:11, fontWeight:700, cursor:"pointer",
+                    background: payment===t ? B[800] : B[50],
+                    color:      payment===t ? B[0]   : B[600],
+                    border:     `1px solid ${payment===t ? B[800] : B[200]}`,
+                  }}>{t}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Entrega */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Prazo de entrega</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                {DELIVERY_OPTIONS.map(d => (
+                  <button key={d} onClick={() => setDelivery(d)} style={{
+                    padding:"8px 12px", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"left",
+                    background: delivery===d ? B[50]  : B[0],
+                    color:      delivery===d ? B[700] : B[500],
+                    border:     `1px solid ${delivery===d ? B[400] : B[200]}`,
+                    borderLeft: `3px solid ${delivery===d ? B[500] : "transparent"}`,
+                  }}>{d}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Observações */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Observações</div>
+              <textarea
+                value={notes} onChange={e => setNotes(e.target.value)}
+                placeholder="Instruções especiais, referência do cliente, local de entrega..."
+                rows={3}
+                style={{ width:"100%", padding:"8px 10px", border:`1px solid ${B[200]}`, background:B[50], fontSize:11, color:B[800], outline:"none", fontFamily:"inherit", resize:"vertical", boxSizing:"border-box" }}
+              />
+            </div>
+
+            {/* Resumo final */}
+            <div style={{ background:B[800], padding:"12px 14px" }}>
+              <div style={{ fontSize:10, color:B[300], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Resumo do pedido</div>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:B[400], marginBottom:4 }}>
+                <span>{totalItems} produto{totalItems!==1?"s":""}</span>
+                <span style={{ fontVariantNumeric:"tabular-nums" }}>{fmt(subtotal)}</span>
+              </div>
+              {discount > 0 && (
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:B[400], marginBottom:4 }}>
+                  <span>Desconto {discount}%</span><span>− {fmt(subtotal * discount / 100)}</span>
+                </div>
+              )}
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:15, fontWeight:900, color:B[0], paddingTop:8, borderTop:`1px solid ${B[700]}`, marginTop:4 }}>
+                <span>Total</span><span style={{ fontVariantNumeric:"tabular-nums" }}>{fmt(totalDisc)}</span>
+              </div>
+              <div style={{ marginTop:8, fontSize:10, color:B[400] }}>
+                {payment} · {delivery}
+              </div>
+            </div>
+          </div>
+
+          {/* Botões de envio */}
+          <div style={{ borderTop:`1px solid ${B[150]}`, padding:"10px 14px", display:"flex", flexDirection:"column", gap:6, background:B[0] }}>
+            <button onClick={sendOrder} style={{
+              padding:"11px", background:B[500], color:B[0], border:"none",
+              fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:.3,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:7
+            }}>
+              {Ic.send(14)} Enviar pedido + WhatsApp
+            </button>
+            <button onClick={sendOrder} style={{
+              padding:"9px", background:B[0], color:B[700], border:`1px solid ${B[300]}`,
+              fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:.3,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:7
+            }}>
+              <span style={{ fontSize:8, fontWeight:900, background:B[800], color:B[0], padding:"2px 5px", letterSpacing:.5 }}>ERP</span>
+              Enviar apenas ao ERP
+            </button>
+            <button onClick={() => setStep("resumo")} style={{ padding:"7px", background:"none", color:B[400], border:"none", fontSize:11, cursor:"pointer" }}>
+              ← Voltar ao resumo
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Conversas({ isMobile }) {
   const [active, setActive]     = useState(1);
   const [input, setInput]       = useState("");
@@ -572,122 +984,13 @@ function Conversas({ isMobile }) {
 
           {/* ── TAB: PEDIDO ASSISTIDO ── */}
           {rightTab==="pedido" && (
-            <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column" }}>
-              {/* Cabeçalho cliente */}
-              <div style={{ padding:"14px 16px", borderBottom:`1px solid ${B[100]}`, background:B[50] }}>
-                <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:4 }}>Pedido para</div>
-                <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{ac?.name}</div>
-                <div style={{ fontSize:11, color:B[500], marginTop:2 }}>{ac?.stage} · {ac?.city}</div>
-              </div>
-
-              {/* Produtos */}
-              <div style={{ padding:"12px 16px", borderBottom:`1px solid ${B[100]}` }}>
-                <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:10 }}>Selecionar Produtos</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {PRODUCTS.map(p=>{
-                    const qty = orderQty[p.id]||0;
-                    return (
-                      <div key={p.id} style={{ border:`1px solid ${qty>0?B[400]:B[200]}`, background: qty>0?B[50]:B[0], padding:"9px 12px" }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, alignItems:"flex-start" }}>
-                          <div>
-                            <div style={{ fontSize:11, fontWeight:700, color:B[800] }}>{p.name}</div>
-                            <div style={{ fontSize:10, color:B[500] }}>{fmt(p.price)}/{p.unit}</div>
-                          </div>
-                          <div style={{ fontSize:10, color:B[400], textAlign:"right" }}>
-                            <div>Estoque</div>
-                            <div style={{ fontWeight:700, color:p.stock<20?B[600]:B[700] }}>{p.stock} {p.unit}</div>
-                          </div>
-                        </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                          <button onClick={()=>setOrderQty(q=>({...q,[p.id]:Math.max(0,(q[p.id]||0)-1)}))}
-                            style={{ width:22,height:22,background:B[100],border:`1px solid ${B[200]}`,color:B[700],cursor:"pointer",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1 }}>−</button>
-                          <input
-                            value={qty}
-                            onChange={e=>setOrderQty(q=>({...q,[p.id]:Math.max(0,parseInt(e.target.value)||0)}))}
-                            style={{ width:36, textAlign:"center", border:`1px solid ${B[200]}`, padding:"2px 0", fontSize:12, fontWeight:800, color:B[800], background:B[0], outline:"none", fontFamily:"monospace" }}
-                          />
-                          <button onClick={()=>setOrderQty(q=>({...q,[p.id]:(q[p.id]||0)+1}))}
-                            style={{ width:22,height:22,background:B[500],border:"none",color:B[0],cursor:"pointer",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1 }}>+</button>
-                          {qty>0 && <span style={{ marginLeft:"auto", fontSize:11, fontWeight:700, color:B[600], fontVariantNumeric:"tabular-nums" }}>{fmt(p.price*qty)}</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Desconto */}
-              <div style={{ padding:"12px 16px", borderBottom:`1px solid ${B[100]}` }}>
-                <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Desconto comercial</div>
-                <div style={{ display:"flex", gap:6 }}>
-                  {[0,3,5,8,10].map(d=>(
-                    <button key={d} onClick={()=>setDiscount(d)} style={{
-                      flex:1, padding:"5px 0", fontSize:10, fontWeight:700, cursor:"pointer",
-                      background: discount===d ? B[500] : B[50],
-                      color:      discount===d ? B[0]   : B[600],
-                      border:     `1px solid ${discount===d ? B[500] : B[200]}`,
-                    }}>{d}%</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Resumo */}
-              {orderLines.length>0 && (
-                <div style={{ padding:"12px 16px", background:B[50], borderBottom:`1px solid ${B[150]}` }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Resumo do Pedido</div>
-                  {orderLines.map(([id,q])=>{
-                    const p=PRODUCTS.find(x=>x.id===id);
-                    return <div key={id} style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:B[700], marginBottom:4 }}>
-                      <span>{q}x {p.name}</span><span style={{ fontWeight:700 }}>{fmt(p.price*q)}</span>
-                    </div>;
-                  })}
-                  {discount>0 && <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:B[600], borderTop:`1px solid ${B[200]}`, paddingTop:6, marginTop:4 }}>
-                    <span>Desconto {discount}%</span><span>− {fmt(orderSubtotal*discount/100)}</span>
-                  </div>}
-                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, fontWeight:800, color:B[800], borderTop:`1px solid ${B[300]}`, paddingTop:8, marginTop:6 }}>
-                    <span>Total</span><span style={{ fontVariantNumeric:"tabular-nums" }}>{fmt(orderTotal)}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Ações */}
-              <div style={{ padding:"12px 16px", display:"flex", flexDirection:"column", gap:6 }}>
-                <button onClick={sendOrder} disabled={!orderLines.length} style={{
-                  padding:"10px", background: orderLines.length?B[500]:B[200], color:B[0], border:"none",
-                  fontSize:11, fontWeight:700, cursor:orderLines.length?"pointer":"default", letterSpacing:.4,
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                }}>{Ic.send(13)} Enviar Pedido + Mensagem WhatsApp</button>
-                <button onClick={sendOrder} disabled={!orderLines.length} style={{
-                  padding:"10px", background:B[0], color:B[600], border:`1px solid ${B[300]}`,
-                  fontSize:11, fontWeight:700, cursor:orderLines.length?"pointer":"default", letterSpacing:.4,
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                }}>
-                  <span style={{ fontSize:9, fontWeight:800, background:B[800], color:B[0], padding:"2px 5px" }}>ERP</span>
-                  Gerar no ERP apenas
-                </button>
-              </div>
-
-              {/* Histórico */}
-              {pedHist.length>0 && (
-                <div style={{ borderTop:`1px solid ${B[100]}`, padding:"12px 16px" }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Pedidos anteriores</div>
-                  {pedHist.map((p,i)=>(
-                    <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:i<pedHist.length-1?`1px solid ${B[100]}`:undefined }}>
-                      <div>
-                        <div style={{ fontSize:11, fontWeight:700, color:B[600] }}>{p.num}</div>
-                        <div style={{ fontSize:10, color:B[500] }}>{p.date}</div>
-                      </div>
-                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                        <span style={{ fontSize:11, fontWeight:700, color:B[800], fontVariantNumeric:"tabular-nums" }}>{fmt(p.val)}</span>
-                        <span style={{ fontSize:9, fontWeight:800, padding:"2px 6px", textTransform:"uppercase",
-                          background: p.origin==="erp"?B[800]:B[150],
-                          color:      p.origin==="erp"?B[0]:B[600] }}>{p.origin==="erp"?"ERP":"Site"}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PedidoPanel
+              ac={ac}
+              orderQty={orderQty} setOrderQty={setOrderQty}
+              discount={discount} setDiscount={setDiscount}
+              pedHist={pedHist}
+              send={send}
+            />
           )}
 
           {/* ── TAB: GRÁFICOS ── */}
