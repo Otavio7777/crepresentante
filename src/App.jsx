@@ -52,6 +52,10 @@ const Ic = {
   list:    (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
   grid:    (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
   user:    (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  cart:    (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+  tag:     (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+  zap:     (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  x:       (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
 };
 
 // ─────────────────────────────────────────────
@@ -88,6 +92,17 @@ const PRODUCTS = [
 const PRODUCT_CATS = ["Todos", ...new Set(PRODUCTS.map(p=>p.cat))];
 const PAYMENT_TERMS = ["À vista","7 dias","14 dias","21 dias","28 dias","30/60","30/60/90","45/90/135"];
 const DELIVERY_OPTIONS = ["Retirada","3 dias úteis","5 dias úteis","7 dias úteis","10 dias úteis","15 dias úteis","A combinar"];
+const PROMOTIONS = [
+  { id:"PRO1", title:"Válvulas em Destaque", desc:"V200 + V350 com 12% OFF no kit", badge:"12% OFF", color:B?.[600]||"#2563EB", expires:"Até 30/06", products:["P01","P02"], discPct:12 },
+  { id:"PRO2", title:"Rolamentos da Semana", desc:"Linha 6205 e 6305 — leve 5 pague 4", badge:"Leve 5 Pague 4", color:B?.[800]||"#0F2244", expires:"Até 28/06", products:["P04","P05"], discPct:20 },
+  { id:"PRO3", title:"Fixação em Atacado", desc:"A partir de 500 cx com 8% desconto", badge:"8% +500cx", color:B?.[700]||"#1A3560", expires:"Mês inteiro", products:["P07","P08","P09"], discPct:8 },
+];
+const COMBOS = [
+  { id:"C01", name:"Kit Hidráulico Completo", items:[{id:"P12",qty:10},{id:"P13",qty:5}], originalPrice:427.5, comboPrice:360, saving:67.5, tag:"Mais vendido" },
+  { id:"C02", name:"Pack Rolamentos Linha 6200", items:[{id:"P04",qty:5},{id:"P05",qty:3},{id:"P06",qty:2}], originalPrice:500, comboPrice:420, saving:80, tag:"Estoque limitado" },
+  { id:"C03", name:"Kit Transmissão", items:[{id:"P10",qty:2},{id:"P11",qty:1}], originalPrice:155, comboPrice:125, saving:30, tag:"Novidade" },
+  { id:"C04", name:"Fixação Industrial M12", items:[{id:"P07",qty:50},{id:"P08",qty:50},{id:"P09",qty:100}], originalPrice:330, comboPrice:265, saving:65, tag:"Econômico" },
+];
 const CHATS = {
   1:[
     { from:"c", text:"Bom dia! Preciso do orçamento daquelas válvulas industriais.", time:"09:14" },
@@ -1592,8 +1607,368 @@ function Gestao() {
 // ─────────────────────────────────────────────
 // NAV CONFIG
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// PAGE: PEDIDOS — mobile-first order taking
+// ─────────────────────────────────────────────
+function Pedidos({ isMobile }) {
+  const [client, setClient]       = useState(CLIENTS.filter(c=>!c.prospect)[0]);
+  const [cart, setCart]           = useState({});          // { productId: qty }
+  const [cartOpen, setCartOpen]   = useState(false);
+  const [activeCat, setActiveCat] = useState("Todos");
+  const [search, setSearch]       = useState("");
+  const [activePromo, setActivePromo] = useState(null);
+  const [payment, setPayment]     = useState("30/60");
+  const [delivery, setDelivery]   = useState("5 dias úteis");
+  const [notes, setNotes]         = useState("");
+  const [step, setStep]           = useState("catalog");   // catalog | cart | checkout | success
+  const [comboAdded, setComboAdded] = useState({});
+
+  const addToCart    = (id, qty=1) => setCart(c => ({ ...c, [id]: Math.max(0, (c[id]||0)+qty) }));
+  const setQty       = (id, qty)   => setCart(c => qty<=0 ? (({ [id]:_, ...rest })=>rest)(c) : { ...c, [id]: qty });
+  const removeItem   = (id)        => setCart(c => (({ [id]:_, ...rest })=>rest)(c));
+
+  const addCombo = (combo) => {
+    combo.items.forEach(({id,qty}) => addToCart(id, qty));
+    setComboAdded(a => ({ ...a, [combo.id]: true }));
+    setTimeout(() => setComboAdded(a => ({ ...a, [combo.id]: false })), 2000);
+  };
+
+  const cartLines  = Object.entries(cart).filter(([,q])=>q>0);
+  const cartCount  = cartLines.reduce((a,[,q])=>a+q,0);
+  const cartTotal  = cartLines.reduce((a,[id,q])=>a+(PRODUCTS.find(p=>p.id===id)?.price||0)*q,0);
+
+  const filteredProds = PRODUCTS.filter(p =>
+    (activeCat==="Todos" || p.cat===activeCat) &&
+    (p.name.toLowerCase().includes(search.toLowerCase()) || p.ref.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const submitOrder = () => {
+    setStep("success");
+    setTimeout(() => { setCart({}); setStep("catalog"); }, 3000);
+  };
+
+  // ── TELA DE SUCESSO ──
+  if (step==="success") return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"60vh", gap:16, padding:24 }}>
+      <div style={{ width:64, height:64, background:B[500], display:"flex", alignItems:"center", justifyContent:"center", color:B[0] }}>{Ic.check(32)}</div>
+      <div style={{ fontSize:18, fontWeight:800, color:B[800] }}>Pedido enviado!</div>
+      <div style={{ fontSize:13, color:B[600], textAlign:"center" }}>Confirmação enviada ao ERP e mensagem WhatsApp disparada para {client?.name}</div>
+      <div style={{ fontSize:22, fontWeight:900, color:B[500], fontVariantNumeric:"tabular-nums" }}>{fmt(cartTotal)}</div>
+    </div>
+  );
+
+  // ── CHECKOUT ──
+  if (step==="checkout") return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", background:B[0] }}>
+      <div style={{ background:B[800], padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={()=>setStep("cart")} style={{ background:"none",border:"none",color:B[300],cursor:"pointer",display:"flex" }}>{Ic.chevL(20)}</button>
+        <div>
+          <div style={{ fontSize:11, color:B[300], textTransform:"uppercase", letterSpacing:.8 }}>Finalizar pedido</div>
+          <div style={{ fontSize:13, fontWeight:700, color:B[0] }}>{client?.name}</div>
+        </div>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:16 }}>
+
+        {/* Resumo itens */}
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Itens do pedido</div>
+          {cartLines.map(([id,q])=>{
+            const p = PRODUCTS.find(x=>x.id===id);
+            return (
+              <div key={id} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`1px solid ${B[100]}` }}>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{p?.name}</div>
+                  <div style={{ fontSize:11, color:B[500] }}>{q}x · {fmt(p?.price||0)}/{p?.unit}</div>
+                </div>
+                <div style={{ fontWeight:800, color:B[700], fontVariantNumeric:"tabular-nums" }}>{fmt((p?.price||0)*q)}</div>
+              </div>
+            );
+          })}
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:10, paddingTop:10, borderTop:`2px solid ${B[300]}` }}>
+            <span style={{ fontWeight:700, color:B[800] }}>Total</span>
+            <span style={{ fontSize:18, fontWeight:900, color:B[800], fontVariantNumeric:"tabular-nums" }}>{fmt(cartTotal)}</span>
+          </div>
+        </div>
+
+        {/* Pagamento */}
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Condição de pagamento</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+            {PAYMENT_TERMS.map(t=>(
+              <button key={t} onClick={()=>setPayment(t)} style={{ padding:"10px 8px", fontSize:12, fontWeight:700, cursor:"pointer",
+                background:payment===t?B[800]:B[50], color:payment===t?B[0]:B[600], border:`1px solid ${payment===t?B[800]:B[200]}` }}>{t}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Entrega */}
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Prazo de entrega</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            {DELIVERY_OPTIONS.map(d=>(
+              <button key={d} onClick={()=>setDelivery(d)} style={{ padding:"11px 14px", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"left",
+                background:delivery===d?B[50]:B[0], color:delivery===d?B[800]:B[500],
+                border:`1px solid ${delivery===d?B[400]:B[200]}`, borderLeft:`4px solid ${delivery===d?B[500]:"transparent"}` }}>{d}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Obs */}
+        <div style={{ marginBottom:80 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:B[700], textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>Observações</div>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} placeholder="Instruções de entrega, referência do pedido..."
+            style={{ width:"100%", padding:"10px 12px", border:`1px solid ${B[200]}`, fontSize:12, color:B[800], outline:"none", fontFamily:"inherit", resize:"none", boxSizing:"border-box", background:B[50] }} />
+        </div>
+      </div>
+
+      {/* Botão finalizar */}
+      <div style={{ position:"sticky", bottom:0, background:B[0], borderTop:`1px solid ${B[150]}`, padding:14, display:"flex", flexDirection:"column", gap:8 }}>
+        <button onClick={submitOrder} style={{ padding:"14px", background:B[500], color:B[0], border:"none", fontSize:13, fontWeight:800, cursor:"pointer", letterSpacing:.3, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          {Ic.send(16)} Confirmar e enviar ao ERP
+        </button>
+        <button onClick={submitOrder} style={{ padding:"10px", background:B[0], color:B[700], border:`1px solid ${B[300]}`, fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+          <span style={{ fontSize:8, fontWeight:900, background:B[800], color:B[0], padding:"2px 5px" }}>ERP</span> Somente ERP — sem WhatsApp
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── CARRINHO ──
+  if (step==="cart") return (
+    <div style={{ display:"flex", flexDirection:"column", background:B[0], minHeight:"100%" }}>
+      <div style={{ background:B[800], padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={()=>setStep("catalog")} style={{ background:"none",border:"none",color:B[300],cursor:"pointer",display:"flex" }}>{Ic.chevL(20)}</button>
+        <div>
+          <div style={{ fontSize:11, color:B[300], textTransform:"uppercase", letterSpacing:.8 }}>Carrinho</div>
+          <div style={{ fontSize:13, fontWeight:700, color:B[0] }}>{cartCount} item{cartCount!==1?"s":""}</div>
+        </div>
+      </div>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        {cartLines.length===0 ? (
+          <div style={{ textAlign:"center", padding:"48px 24px", color:B[400] }}>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:12, opacity:.3 }}>{Ic.cart(40)}</div>
+            <div style={{ fontSize:13, fontWeight:600 }}>Carrinho vazio</div>
+          </div>
+        ) : cartLines.map(([id,q])=>{
+          const p = PRODUCTS.find(x=>x.id===id);
+          return (
+            <div key={id} style={{ padding:"14px 16px", borderBottom:`1px solid ${B[100]}`, display:"flex", gap:12, alignItems:"center" }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{p?.name}</div>
+                <div style={{ fontSize:11, color:B[500], marginTop:2 }}>{p?.ref} · {fmt(p?.price||0)}/{p?.unit}</div>
+                <div style={{ fontSize:12, fontWeight:800, color:B[600], marginTop:4, fontVariantNumeric:"tabular-nums" }}>{fmt((p?.price||0)*q)}</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                <button onClick={()=>setQty(id,q-1)} style={{ width:32,height:32,background:B[100],border:`1px solid ${B[200]}`,color:B[700],cursor:"pointer",fontWeight:900,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>−</button>
+                <span style={{ fontSize:14,fontWeight:800,color:B[800],minWidth:24,textAlign:"center",fontFamily:"monospace" }}>{q}</span>
+                <button onClick={()=>setQty(id,q+1)} style={{ width:32,height:32,background:B[500],border:"none",color:B[0],cursor:"pointer",fontWeight:900,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>+</button>
+                <button onClick={()=>removeItem(id)} style={{ width:28,height:28,background:"none",border:`1px solid ${B[200]}`,color:B[400],cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>{Ic.x(12)}</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {cartLines.length>0 && (
+        <div style={{ position:"sticky", bottom:0, background:B[0], borderTop:`2px solid ${B[150]}`, padding:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:12 }}>
+            <span style={{ fontSize:13, color:B[700] }}>{cartCount} item{cartCount!==1?"s":""}</span>
+            <span style={{ fontSize:18, fontWeight:900, color:B[800], fontVariantNumeric:"tabular-nums" }}>{fmt(cartTotal)}</span>
+          </div>
+          <button onClick={()=>setStep("checkout")} style={{ width:"100%", padding:"14px", background:B[500], color:B[0], border:"none", fontSize:14, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            Finalizar pedido {Ic.chevR(16)}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── CATÁLOGO ──
+  return (
+    <div style={{ display:"flex", flexDirection:"column", background:B[50], minHeight:"100%", position:"relative" }}>
+
+      {/* Seletor de cliente */}
+      <div style={{ background:B[800], padding:"12px 16px" }}>
+        <div style={{ fontSize:9, color:B[400], textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Pedido para</div>
+        <div style={{ display:"flex", gap:0, overflowX:"auto", paddingBottom:2 }}>
+          {CLIENTS.filter(c=>!c.prospect).map(c=>(
+            <button key={c.id} onClick={()=>setClient(c)} style={{
+              padding:"7px 12px", background: client?.id===c.id?B[500]:"rgba(255,255,255,0.08)",
+              color: client?.id===c.id?B[0]:B[400], border:"none", cursor:"pointer",
+              fontSize:11, fontWeight:700, whiteSpace:"nowrap", flexShrink:0,
+              borderRight: `1px solid ${B[700]}`,
+            }}>{c.name.split(" ")[0]+" "+c.name.split(" ")[1]}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Busca */}
+      <div style={{ background:B[0], padding:"10px 14px", borderBottom:`1px solid ${B[150]}` }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:"8px 12px" }}>
+          <span style={{ color:B[400], display:"flex", flexShrink:0 }}>{Ic.search(15)}</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar produto ou código..."
+            style={{ border:"none", background:"none", outline:"none", fontSize:13, color:B[800], flex:1, fontFamily:"inherit" }} />
+          {search && <button onClick={()=>setSearch("")} style={{ background:"none",border:"none",color:B[400],cursor:"pointer",display:"flex" }}>{Ic.x(14)}</button>}
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", paddingBottom:100 }}>
+
+        {/* PROMOÇÕES */}
+        {!search && (
+          <div style={{ padding:"14px 0 0" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"0 14px", marginBottom:10 }}>
+              <span style={{ color:B[500], display:"flex" }}>{Ic.zap(14)}</span>
+              <span style={{ fontSize:10, fontWeight:800, color:B[700], textTransform:"uppercase", letterSpacing:.9 }}>Promoções ativas</span>
+            </div>
+            <div style={{ display:"flex", gap:10, overflowX:"auto", padding:"0 14px 14px", scrollbarWidth:"none" }}>
+              {PROMOTIONS.map(promo=>(
+                <div key={promo.id} style={{ flexShrink:0, width:220, background:B[800], padding:"14px", position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", top:0, right:0, background:B[500], padding:"4px 10px", fontSize:10, fontWeight:900, color:B[0], letterSpacing:.5 }}>{promo.badge}</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:B[0], marginBottom:4, marginTop:8, lineHeight:1.3 }}>{promo.title}</div>
+                  <div style={{ fontSize:11, color:B[300], marginBottom:10, lineHeight:1.4 }}>{promo.desc}</div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:10, color:B[400] }}>{promo.expires}</span>
+                    <button onClick={()=>{ promo.products.forEach(id=>addToCart(id,1)); }} style={{ padding:"6px 12px", background:B[500], color:B[0], border:"none", fontSize:10, fontWeight:700, cursor:"pointer", letterSpacing:.3 }}>
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* COMBOS */}
+        {!search && (
+          <div style={{ padding:"0 0 4px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"0 14px", marginBottom:10 }}>
+              <span style={{ color:B[500], display:"flex" }}>{Ic.tag(14)}</span>
+              <span style={{ fontSize:10, fontWeight:800, color:B[700], textTransform:"uppercase", letterSpacing:.9 }}>Combos especiais</span>
+            </div>
+            <div style={{ display:"flex", gap:10, overflowX:"auto", padding:"0 14px 14px", scrollbarWidth:"none" }}>
+              {COMBOS.map(combo=>(
+                <div key={combo.id} style={{ flexShrink:0, width:200, background:B[0], border:`1px solid ${B[200]}`, borderTop:`3px solid ${B[500]}`, padding:"12px" }}>
+                  <div style={{ fontSize:10, fontWeight:800, color:B[500], textTransform:"uppercase", letterSpacing:.5, marginBottom:4 }}>{combo.tag}</div>
+                  <div style={{ fontSize:12, fontWeight:800, color:B[800], marginBottom:6, lineHeight:1.3 }}>{combo.name}</div>
+                  <div style={{ marginBottom:8 }}>
+                    {combo.items.map(({id,qty})=>{
+                      const p=PRODUCTS.find(x=>x.id===id);
+                      return <div key={id} style={{ fontSize:10, color:B[600], marginBottom:2 }}>{qty}x {p?.name}</div>;
+                    })}
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:B[400], textDecoration:"line-through" }}>{fmt(combo.originalPrice)}</div>
+                      <div style={{ fontSize:15, fontWeight:900, color:B[700], fontVariantNumeric:"tabular-nums" }}>{fmt(combo.comboPrice)}</div>
+                    </div>
+                    <div style={{ fontSize:10, fontWeight:800, background:B[150], color:B[600], padding:"3px 7px" }}>
+                      -{fmt(combo.saving)}
+                    </div>
+                  </div>
+                  <button onClick={()=>addCombo(combo)} style={{
+                    width:"100%", padding:"9px", fontSize:11, fontWeight:800, cursor:"pointer",
+                    background: comboAdded[combo.id]?B[100]:B[500],
+                    color:      comboAdded[combo.id]?B[500]:B[0],
+                    border:     `1px solid ${comboAdded[combo.id]?B[400]:B[500]}`,
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+                  }}>
+                    {comboAdded[combo.id] ? <>{Ic.check(12)} Adicionado</> : <>{Ic.plus(12)} Adicionar combo</>}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Categorias */}
+        <div style={{ background:B[0], borderTop:`1px solid ${B[150]}`, borderBottom:`1px solid ${B[150]}` }}>
+          <div style={{ display:"flex", overflowX:"auto", scrollbarWidth:"none" }}>
+            {PRODUCT_CATS.map(cat=>(
+              <button key={cat} onClick={()=>setActiveCat(cat)} style={{
+                padding:"11px 14px", background:"none", border:"none", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0,
+                fontSize:11, fontWeight:700, letterSpacing:.3,
+                color:       activeCat===cat?B[500]:B[400],
+                borderBottom:activeCat===cat?`2px solid ${B[500]}`:"2px solid transparent",
+                marginBottom:-1,
+              }}>{cat}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Grid de produtos */}
+        <div style={{ padding:10, display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+          {filteredProds.map(p=>{
+            const qty = cart[p.id]||0;
+            const lowStock = p.stock<20;
+            return (
+              <div key={p.id} style={{
+                background:B[0], border:`1px solid ${qty>0?B[400]:B[200]}`,
+                borderTop:`3px solid ${qty>0?B[500]:B[200]}`,
+                padding:"11px 11px 10px", display:"flex", flexDirection:"column", gap:6,
+              }}>
+                <div style={{ fontSize:9, color:B[400], fontFamily:"monospace" }}>{p.ref}</div>
+                <div style={{ fontSize:12, fontWeight:700, color:B[800], lineHeight:1.3, flex:1 }}>{p.name}</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:900, color:B[700], fontVariantNumeric:"tabular-nums" }}>{fmt(p.price)}</div>
+                    <div style={{ fontSize:9, color: lowStock?"#B45309":B[400] }}>{lowStock?`⚠ ${p.stock} un`:p.unit}</div>
+                  </div>
+                  <div style={{ fontSize:9, color:B[400], textAlign:"right" }}>{p.cat}</div>
+                </div>
+
+                {qty===0 ? (
+                  <button onClick={()=>addToCart(p.id)} style={{ padding:"9px", background:B[500], color:B[0], border:"none", fontSize:12, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
+                    {Ic.plus(13)} Adicionar
+                  </button>
+                ) : (
+                  <div style={{ display:"flex", alignItems:"center", gap:0, border:`1px solid ${B[400]}` }}>
+                    <button onClick={()=>setQty(p.id,qty-1)} style={{ flex:1, padding:"8px 0", background:B[100], border:"none", color:B[700], cursor:"pointer", fontWeight:900, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+                    <span style={{ flex:1, textAlign:"center", fontWeight:800, fontSize:14, color:B[800], fontFamily:"monospace" }}>{qty}</span>
+                    <button onClick={()=>addToCart(p.id)} style={{ flex:1, padding:"8px 0", background:B[500], border:"none", color:B[0], cursor:"pointer", fontWeight:900, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {filteredProds.length===0 && (
+            <div style={{ gridColumn:"1/-1", textAlign:"center", padding:"32px", color:B[400], fontSize:13 }}>Nenhum produto encontrado</div>
+          )}
+        </div>
+      </div>
+
+      {/* Barra flutuante do carrinho */}
+      {cartCount>0 && (
+        <div style={{ position:"fixed", bottom: isMobile?68:16, left:isMobile?0:"auto", right:0, width:isMobile?"100%":"auto", padding:isMobile?"10px 14px":"0", zIndex:100, display:"flex", justifyContent: isMobile?"stretch":"flex-end" }}>
+          <button onClick={()=>setStep("cart")} style={{
+            flex:1, display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:B[800], color:B[0], border:"none", padding:"14px 20px", cursor:"pointer",
+            boxShadow:"0 4px 20px rgba(0,0,0,0.3)",
+            maxWidth: isMobile?"none":340,
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ position:"relative" }}>
+                {Ic.cart(22)}
+                <div style={{ position:"absolute", top:-6, right:-6, width:17, height:17, background:B[500], borderRadius:"50%", fontSize:9, fontWeight:900, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</div>
+              </div>
+              <div style={{ textAlign:"left" }}>
+                <div style={{ fontSize:10, color:B[300], letterSpacing:.5 }}>{cartCount} item{cartCount!==1?"s":""} selecionados</div>
+                <div style={{ fontSize:15, fontWeight:900, fontVariantNumeric:"tabular-nums" }}>{fmt(cartTotal)}</div>
+              </div>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:700 }}>
+              Ver carrinho {Ic.chevR(16)}
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const NAV = [
   { id:"dashboard", label:"Início",    icon:Ic.home   },
+  { id:"pedidos",   label:"Pedidos",   icon:Ic.cart   },
   { id:"conversas", label:"Conversas", icon:Ic.chat   },
   { id:"clientes",  label:"Clientes",  icon:Ic.users  },
   { id:"metas",     label:"Metas",     icon:Ic.target },
@@ -1607,10 +1982,11 @@ export default function App() {
   const [page, setPage] = useState("dashboard");
   const [sideOpen, setSideOpen] = useState(true);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 700;
-  const TITLES = { dashboard:"Dashboard", conversas:"Conversas", clientes:"Clientes", metas:"Metas", gestao:"Gestão" };
+  const TITLES = { dashboard:"Dashboard", pedidos:"Tirar Pedido", conversas:"Conversas", clientes:"Clientes", metas:"Metas", gestao:"Gestão" };
 
   const renderPage = () => {
     if (page==="dashboard") return <Dashboard />;
+    if (page==="pedidos")   return <Pedidos isMobile={isMobile} />;
     if (page==="conversas") return <Conversas isMobile={isMobile} />;
     if (page==="clientes")  return <Clientes />;
     if (page==="metas")     return <Metas />;
