@@ -255,7 +255,7 @@ function OrderPanel({ contact, products, promotions, combos, paymentTerms, deliv
   )
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', minHeight:0 }}>
       {/* Search + client info */}
       {contact && <div style={{ padding:'10px 14px', background:B[800], borderBottom:`1px solid ${B[700]}` }}>
         <div style={{ fontSize:12, fontWeight:700, color:B[0] }}>{contact.name}</div>
@@ -269,7 +269,7 @@ function OrderPanel({ contact, products, promotions, combos, paymentTerms, deliv
         </div>
       </div>
 
-      <div style={{ flex:1, overflowY:'auto' }}>
+      <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
         {/* Promos */}
         {!search && promotions.length>0 && (
           <div style={{ padding:'10px 0 4px' }}>
@@ -1403,7 +1403,7 @@ function DesktopPedidos({ data }) {
         </div>
       </div>
       {/* Order builder */}
-      <div style={{ flex:1, overflow:'hidden' }}>
+      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minHeight:0 }}>
         <OrderPanel contact={client} products={data.products} promotions={data.promotions} combos={data.combos} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={data.createOrder} />
       </div>
       {/* Order history */}
@@ -1433,66 +1433,166 @@ function DesktopPedidos({ data }) {
 }
 
 function DesktopConversas({ data }) {
-  const [activeId, setActiveId] = useState(data.contacts[0]?.id)
-  const [msgs, setMsgs]         = useState({ ...MOCK.messages })
-  const [showOrder, setShowOrder] = useState(false)
-  const ac = data.contacts.find(c=>c.id===activeId)
-  const sendMsg = text => { const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); setMsgs(m=>({...m,[activeId]:[...(m[activeId]||[]),{from:'m',text,time:now}]}))}
+  const [activeId, setActiveId]   = useState(data.contacts[0]?.id)
+  const [msgs, setMsgs]           = useState({ ...MOCK.messages })
+  const [rightTab, setRightTab]   = useState('info') // info | order
+  const [search, setSearch]       = useState('')
+
+  const ac      = data.contacts.find(c => c.id === activeId)
+  const sendMsg = text => {
+    const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+    setMsgs(m => ({ ...m, [activeId]: [...(m[activeId]||[]), { from:'m', text, time:now }] }))
+  }
+
+  const filteredContacts = data.contacts.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.company.toLowerCase().includes(search.toLowerCase())
+  )
+
   return (
-    <div style={{ display:'flex', height:'100%' }}>
-      {/* Contact list */}
-      <div style={{ width:280, background:B[0], borderRight:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0 }}>
-        <div style={{ padding:'12px 14px', borderBottom:`1px solid ${B[150]}` }}>
+    <div style={{ display:'flex', height:'100%', minHeight:0 }}>
+
+      {/* ── Col 1: Contact list ── */}
+      <div style={{ width:264, background:B[0], borderRight:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0, minHeight:0 }}>
+        <div style={{ padding:'12px 12px', borderBottom:`1px solid ${B[150]}`, flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'8px 10px' }}>
-            <Ic n="search" s={14} c={B[400]} /><input placeholder="Buscar conversa..." style={{ border:'none', background:'none', outline:'none', fontSize:12, color:B[800], flex:1, fontFamily:'inherit' }} />
+            <Ic n="search" s={13} c={B[400]} />
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar contato..."
+              style={{ border:'none', background:'none', outline:'none', fontSize:12, color:B[800], flex:1, fontFamily:'inherit' }} />
           </div>
         </div>
-        <div style={{ flex:1, overflowY:'auto' }}>
-          {data.contacts.map(c=>{
-            const last=(msgs[c.id]||[]).at(-1)
+        <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
+          {filteredContacts.map(c => {
+            const last = (msgs[c.id]||[]).at(-1)
+            const isActive = activeId === c.id
             return (
-              <div key={c.id} onClick={()=>setActiveId(c.id)} style={{ display:'flex', gap:10, padding:'12px 14px', cursor:'pointer', background:activeId===c.id?B[50]:B[0], borderLeft:`3px solid ${activeId===c.id?B[800]:'transparent'}`, borderBottom:`1px solid ${B[100]}`, alignItems:'center' }}>
-                <div style={{ position:'relative' }}><Av lbl={c.av} sz={38} bg={activeId===c.id?B[700]:B[800]} />{c.unread>0&&<div style={{ position:'absolute', top:-3, right:-3, width:15, height:15, background:B[500], borderRadius:'50%', fontSize:9, fontWeight:900, color:B[0], display:'flex', alignItems:'center', justifyContent:'center' }}>{c.unread}</div>}</div>
+              <div key={c.id} onClick={() => { setActiveId(c.id); setRightTab('info') }}
+                style={{ display:'flex', gap:10, padding:'11px 12px', cursor:'pointer', alignItems:'center',
+                  background: isActive ? B[50] : B[0],
+                  borderLeft: `3px solid ${isActive ? B[800] : 'transparent'}`,
+                  borderBottom: `1px solid ${B[100]}` }}>
+                <div style={{ position:'relative', flexShrink:0 }}>
+                  <Av lbl={c.av} sz={36} bg={isActive?B[700]:B[800]} />
+                  {c.unread>0 && <div style={{ position:'absolute', top:-3, right:-3, width:15, height:15, background:B[500], borderRadius:'50%', fontSize:8, fontWeight:900, color:B[0], display:'flex', alignItems:'center', justifyContent:'center' }}>{c.unread}</div>}
+                </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}><span style={{ fontSize:12, fontWeight:700, color:B[800], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span><span style={{ fontSize:10, color:B[400], flexShrink:0 }}>{c.last_contact_at}</span></div>
-                  <div style={{ fontSize:11, color:B[500], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{last?.text?.split('\n')[0]||'—'}</div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
+                    <span style={{ fontSize:12, fontWeight:isActive?700:500, color:B[800], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span>
+                    <span style={{ fontSize:9, color:B[400], flexShrink:0, marginLeft:4 }}>{c.last_contact_at}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:B[500], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {last?.text?.split('\n')[0] || c.company}
+                  </div>
+                  {c.stage && <div style={{ marginTop:3 }}><Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} /></div>}
                 </div>
               </div>
             )
           })}
         </div>
       </div>
-      {/* Chat */}
-      <div style={{ flex:1, overflow:'hidden' }}>
-        <ChatPanel contact={ac} msgs={msgs[activeId]||[]} onSend={sendMsg} />
+
+      {/* ── Col 2: Chat ── */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', minHeight:0, minWidth:0 }}>
+        <ChatPanel
+          contact={ac}
+          msgs={msgs[activeId]||[]}
+          onSend={sendMsg}
+          rightSlot={
+            <button onClick={() => setRightTab(t => t==='order'?'info':'order')}
+              style={{ padding:'6px 12px', background:rightTab==='order'?B[0]:B[600], color:rightTab==='order'?B[800]:B[0], border:rightTab==='order'?`1px solid ${B[300]}`:'none', fontSize:10, fontWeight:800, cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', gap:5 }}>
+              <Ic n="cart" s={12} c={rightTab==='order'?B[800]:B[0]} />
+              {rightTab==='order' ? 'Fechar' : 'Pedido'}
+            </button>
+          }
+        />
       </div>
-      {/* Right panel: order or contact info */}
-      <div style={{ width:300, background:B[0], borderLeft:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0 }}>
-        <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-          {[['info','Contato'],['order','Pedido Rápido']].map(([id,lbl])=>(
-            <button key={id} onClick={()=>setShowOrder(id==='order')} style={{ flex:1, padding:'11px', background:'none', border:'none', cursor:'pointer', fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:.5, color:((showOrder&&id==='order')||(!showOrder&&id==='info'))?B[800]:B[400], borderBottom:((showOrder&&id==='order')||(!showOrder&&id==='info'))?`2px solid ${B[800]}`:'2px solid transparent', marginBottom:-1 }}>{lbl}</button>
+
+      {/* ── Col 3: Right panel ── */}
+      <div style={{ width:308, background:B[0], borderLeft:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0, minHeight:0 }}>
+        {/* Tab header */}
+        <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}`, flexShrink:0 }}>
+          {[['info','Contato'],['order','Compra Assistida']].map(([id,lbl]) => (
+            <button key={id} onClick={() => setRightTab(id)} style={{
+              flex:1, padding:'10px 6px', background:'none', border:'none', cursor:'pointer',
+              fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:.5,
+              color:      rightTab===id ? B[800] : B[400],
+              borderBottom: rightTab===id ? `2px solid ${B[800]}` : '2px solid transparent',
+              marginBottom:-1,
+            }}>{lbl}</button>
           ))}
         </div>
-        {!showOrder ? (
-          <div style={{ overflowY:'auto' }}>
+
+        {rightTab === 'info' ? (
+          /* ── Contact info ── */
+          <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
+            {/* Hero */}
             <div style={{ padding:'16px', background:B[50], borderBottom:`1px solid ${B[150]}` }}>
-              <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+              <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:12 }}>
                 <Av lbl={ac?.av||'?'} sz={44} bg={B[800]} />
-                <div><div style={{ fontSize:14, fontWeight:800, color:B[800] }}>{ac?.name}</div><div style={{ fontSize:12, color:B[500] }}>{ac?.job_title}</div><div style={{ fontSize:11, color:B[400] }}>{ac?.company}</div></div>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:800, color:B[800] }}>{ac?.name}</div>
+                  <div style={{ fontSize:12, color:B[500] }}>{ac?.job_title||'—'}</div>
+                  <div style={{ fontSize:11, color:B[400] }}>{ac?.company}</div>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {(ac?.tags||[]).map(t => <Tag key={t} label={t} variant={tagVariant(t)} />)}
               </div>
             </div>
-            {ac && [['phone','Telefone',ac.phone],['mail','E-mail',ac.email],['map','Cidade',`${ac.city} · ${ac.state}`],['funnel','Estágio',STAGE_LABEL[ac.stage]||ac.stage]].map(([icon,label,val])=>(
-              <div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:`1px solid ${B[100]}` }}>
-                <Ic n={icon} s={16} c={B[400]} />
-                <div><div style={{ fontSize:10, color:B[400], marginBottom:1 }}>{label}</div><div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{val||'—'}</div></div>
+            {/* Actions */}
+            <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
+              {[['phone','Ligar'],['chat','Chat'],['cal','Visita'],['file','Orçar']].map(([icon,lbl]) => (
+                <button key={lbl} style={{ flex:1, padding:'10px 4px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                  <Ic n={icon} s={17} c={B[800]} />
+                  <span style={{ fontSize:8, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.3 }}>{lbl}</span>
+                </button>
+              ))}
+            </div>
+            {/* Info rows */}
+            {ac && [
+              ['phone','Telefone', ac.phone],
+              ['mail', 'E-mail',   ac.email],
+              ['map',  'Cidade',   `${ac.city||'—'} · ${ac.state||'MG'}`],
+              ['funnel','Estágio', STAGE_LABEL[ac.stage]||ac.stage],
+            ].map(([icon,label,val]) => (
+              <div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${B[100]}` }}>
+                <Ic n={icon} s={15} c={B[400]} />
+                <div>
+                  <div style={{ fontSize:9, color:B[400], marginBottom:1, textTransform:'uppercase', letterSpacing:.4 }}>{label}</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{val||'—'}</div>
+                </div>
               </div>
             ))}
-            {ac?.pipeline_value>0 && <div style={{ padding:'14px 16px', borderBottom:`1px solid ${B[100]}` }}><div style={{ fontSize:10, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>Pipeline</div><div style={{ fontSize:20, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(ac.pipeline_value)}</div><Tag label={STAGE_LABEL[ac.stage]||ac.stage} /></div>}
-            {ac?.notes && <div style={{ padding:'14px 16px' }}><div style={{ fontSize:10, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Notas</div><div style={{ fontSize:12, color:B[700], lineHeight:1.6, background:B[50], padding:'10px 12px', borderLeft:`3px solid ${B[800]}` }}>{ac.notes}</div></div>}
+            {ac?.pipeline_value>0 && (
+              <div style={{ padding:'12px 14px', borderBottom:`1px solid ${B[100]}` }}>
+                <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>Pipeline</div>
+                <div style={{ fontSize:20, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(ac.pipeline_value)}</div>
+                <div style={{ marginTop:4 }}><Tag label={STAGE_LABEL[ac.stage]||ac.stage} variant={ac.stage==='closing'?'success':ac.stage==='prospect'?'prospect':'default'} /></div>
+              </div>
+            )}
+            {ac?.notes && (
+              <div style={{ padding:'12px 14px' }}>
+                <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:6 }}>Notas</div>
+                <div style={{ fontSize:12, color:B[700], lineHeight:1.6, background:B[50], padding:'10px 12px', borderLeft:`3px solid ${B[800]}` }}>{ac.notes}</div>
+              </div>
+            )}
           </div>
         ) : (
-          <div style={{ flex:1, overflow:'hidden' }}>
-            <OrderPanel contact={ac} products={data.products} promotions={[]} combos={[]} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={data.createOrder} compact />
+          /* ── Compra Assistida ── */
+          <div style={{ flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+            <OrderPanel
+              contact={ac}
+              products={data.products}
+              promotions={data.promotions}
+              combos={data.combos}
+              paymentTerms={data.paymentTerms}
+              deliveryOptions={data.deliveryOptions}
+              onSend={async (...args) => {
+                await data.createOrder(...args)
+                setRightTab('info')
+              }}
+              compact
+            />
           </div>
         )}
       </div>
