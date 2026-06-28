@@ -637,8 +637,10 @@ function Produtos() {
 }
 
 // ─── Page: MARKETING ──────────────────────────────────────────────────────────
-function Marketing() {
-  const [sub, setSub] = useState('agenda')
+function Marketing({ data, isMobile, nav }) {
+  const [sub, setSub]           = useState('agenda')
+  const [ads, setAds]           = useState(ANUNCIOS_MOCK)
+  const [campanhas, setCampanhas] = useState(CAMPANHAS_MOCK)
 
   return (
     <div style={{ display:'flex', flexDirection:'column', minHeight:'100%' }}>
@@ -722,7 +724,7 @@ function Marketing() {
                 <Ic n="plus" s={13} c={B[0]} /> Novo anúncio
               </button>
             </div>
-            {ANUNCIOS.map(a => (
+            {ads.map(a => (
               <div key={a.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
                   <div>
@@ -770,7 +772,7 @@ function Marketing() {
                 <Ic n="plus" s={13} c={B[0]} /> Nova campanha
               </button>
             </div>
-            {CAMPANHAS.map(c => (
+            {campanhas.map(c => (
               <div key={c.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
                   <div>
@@ -1904,10 +1906,10 @@ const CADENCIA_MOCK = [
 
 // ═══ OrderModal — shared by FAB + DesktopApp ═══════════════════
 function OrderModal({ data, open, onClose, initialClientId=null }) {
-  const [step, setStep]         = React.useState('client')
-  const [clientId, setClientId] = React.useState(null)
-  const [search, setSearch]     = React.useState('')
-  const wasOpen = React.useRef(false)
+  const [step, setStep]         = useState('client')
+  const [clientId, setClientId] = useState(null)
+  const [search, setSearch]     = useState('')
+  const wasOpen = useRef(false)
   if (open && !wasOpen.current) {
     wasOpen.current = true
     Promise.resolve().then(()=>{ setStep(initialClientId?'order':'client'); setClientId(initialClientId||null); setSearch('') })
@@ -1962,7 +1964,7 @@ function OrderModal({ data, open, onClose, initialClientId=null }) {
 
 // ═══ AddContactModal ════════════════════════════════════════════
 function AddContactModal({ data, onClose }) {
-  const [form, setForm] = React.useState({ name:'', company:'', phone:'', email:'', city:'', job_title:'' })
+  const [form, setForm] = useState({ name:'', company:'', phone:'', email:'', city:'', job_title:'' })
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
   const save = () => { if (!form.name.trim()) return; data.addContact(form); onClose() }
   return (
