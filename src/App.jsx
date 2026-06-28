@@ -882,7 +882,7 @@ function MobileApp({ data, user, onLogout }) {
       {sideOpen && <div onClick={()=>setSideOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.55)', zIndex:200, backdropFilter:'blur(2px)' }} />}
       <div style={{ position:'fixed', top:0, left:0, bottom:0, width:272, background:B[0], zIndex:201, transform:sideOpen?'translateX(0)':'translateX(-100%)', transition:'transform .25s cubic-bezier(.4,0,.2,1)', display:'flex', flexDirection:'column', boxShadow:sideOpen?'4px 0 32px rgba(15,20,50,0.18)':'none' }}>
         <div style={{ background:B[800], padding:'16px 20px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <img src="/logo.svg" alt="" style={{ height:26, filter:'brightness(0) invert(1)' }} onError={e=>{e.target.style.display='none'}} />
+          <img src="/logo.svg" alt="" style={{ height:30, filter:'brightness(0) invert(1)' }} onError={e=>{e.target.style.display='none'}} />
           <button onClick={()=>setSideOpen(false)} style={{ background:'rgba(255,255,255,0.15)', border:'none', cursor:'pointer', display:'flex', padding:8 }}><Ic n="x" s={16} c={B[0]} /></button>
         </div>
         <div style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
@@ -906,7 +906,7 @@ function MobileApp({ data, user, onLogout }) {
         <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px 0' }}>
           <button onClick={()=>setSideOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:6, marginLeft:-6 }}><Ic n="menu" s={22} c={B[800]} /></button>
           <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
-            <img src="/logo.svg" alt="CRepresentante" style={{ height:28, objectFit:'contain' }} onError={e=>{e.target.style.display='none'}} />
+            <img src="/logo.svg" alt="CRepresentante" style={{ height:32, objectFit:'contain' }} onError={e=>{e.target.style.display='none'}} />
           </div>
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>
             <button style={{ background:'none', border:'none', cursor:'pointer', position:'relative', display:'flex', padding:4 }}>
@@ -1254,9 +1254,9 @@ function DesktopApp({ data, user, onLogout }) {
       <div style={{ width:W, background:B[900], display:'flex', flexDirection:'column', transition:'width .2s', overflow:'hidden', flexShrink:0 }}>
         <div style={{ padding:collapsed?'18px 0 14px':'18px 16px 14px', borderBottom:`1px solid rgba(255,255,255,0.08)`, display:'flex', alignItems:'center', justifyContent:collapsed?'center':'flex-start', gap:10 }}>
           {!collapsed ? <>
-            <img src="/logo.svg" alt="" style={{ height:28, filter:'brightness(0) invert(1)', flexShrink:0 }} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='block'}} />
+            <img src="/logo.svg" alt="" style={{ height:36, filter:'brightness(0) invert(1)', flexShrink:0 }} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='block'}} />
             <span style={{ display:'none', color:B[0], fontWeight:900, fontSize:13 }}>CRep.</span>
-          </> : <div style={{ width:28, height:28, background:B[500], display:'flex', alignItems:'center', justifyContent:'center' }}><Ic n="bar" s={14} c={B[0]} /></div>}
+          </> : <img src="/logo-mark.svg" alt="" style={{ height:30, filter:'brightness(0) invert(1)', flexShrink:0 }} onError={e=>{e.target.style.display='none'}} />}
         </div>
         <nav style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
           {NAV.map((item,i)=>item.section
