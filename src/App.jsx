@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { B, Ic, Av, Tag, tagVariant, fmt, pct, MOCK, AGENDA, ANUNCIOS, CAMPANHAS, CADENCIAS, ERP_PRODUCTS_DETAIL } from './lib/data.jsx'
 import { useIsMobile, useAuth, useAppData } from './hooks/useApp.js'
+import { WhatsAppConnect } from './WhatsAppConnect.jsx'
 
 // ─── Constants ────────────────────────────────
 const STAGES     = ['closing','negotiation','proposal','qualified','prospect']
@@ -884,6 +885,8 @@ function MobileApp({ data, user, onLogout }) {
     { id:'produtos',   label:'Catálogo ERP',        icon:'erp'    },
     { section:'Performance' },
     { id:'mais',       label:'Metas & Gestão',      icon:'bar'    },
+    { section:'Config.' },
+    { id:'whatsapp',   label:'WhatsApp',            icon:'phone'  },
   ]
 
   return (
@@ -941,6 +944,7 @@ function MobileApp({ data, user, onLogout }) {
         {tab==='marketing'  && <Marketing data={data} isMobile nav={nav} />}
         {tab==='produtos'   && <div style={{ padding:16 }}><div style={{ fontSize:12, color:B[500] }}>Abra no desktop para visualização completa dos produtos ERP.</div></div>}
         {tab==='mais'       && <MobileMais data={data} />}
+        {tab==='whatsapp'   && <WhatsAppConnect isMobile />}
       </div>
       {/* Bottom nav */}
       <div style={{ background:B[0], borderTop:`1px solid ${B[150]}`, display:'flex', flexShrink:0 }}>
@@ -1274,9 +1278,10 @@ function DesktopApp({ data, user, onLogout }) {
     { id:'gestao',    label:'Gestão',      icon:'bar'    },
     { section:'Config.' },
     { id:'erp',       label:'Integração ERP', icon:'settings' },
+    { id:'whatsapp',  label:'WhatsApp',        icon:'phone'    },
   ]
 
-  const LABELS = { dashboard:'Dashboard', pedidos:'Pedidos', conversas:'Conversas', contatos:'Carteira de Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo de Produtos ERP', metas:'Metas & Performance', gestao:'Gestão & Relatórios', erp:'Integração ERP' }
+  const LABELS = { dashboard:'Dashboard', pedidos:'Pedidos', conversas:'Conversas', contatos:'Carteira de Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo de Produtos ERP', metas:'Metas & Performance', gestao:'Gestão & Relatórios', erp:'Integração ERP', whatsapp:'Conexão WhatsApp' }
 
   const W = collapsed ? 56 : 220
 
@@ -1340,6 +1345,7 @@ function DesktopApp({ data, user, onLogout }) {
           {tab==='metas'     && <DesktopMetas      data={data} />}
           {tab==='gestao'    && <DesktopGestao     data={data} nav={nav} />}
           {tab==='erp'       && <DesktopErp        data={data} />}
+          {tab==='whatsapp'  && <WhatsAppConnect />}
         </div>
       </div>
     
