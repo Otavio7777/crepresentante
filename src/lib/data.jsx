@@ -176,3 +176,67 @@ export const MOCK = {
   payment_terms: ["À vista","7 dias","14 dias","21 dias","30/60","30/60/90","45/90/135"],
   delivery_options: ["Retirada","3 dias úteis","5 dias úteis","7 dias úteis","10 dias úteis","A combinar"],
 };
+
+// ─── Extended mock data ───────────────────────────────────────────────────────
+export const AGENDA = [
+  { id:"ag1",  contact_id:"c1", contact_name:"Metalúrgica Pinheiro", av:"RP", date:"2025-06-28", time:"14:00", type:"presencial", status:"confirmed", origin:"platform", notes:"Apresentar nova linha de válvulas V350" },
+  { id:"ag2",  contact_id:"c6", contact_name:"Construtora Lima",     av:"PL", date:"2025-06-29", time:"10:00", type:"videocall",  status:"confirmed", origin:"erp",      notes:"Revisão do contrato anual" },
+  { id:"ag3",  contact_id:"c8", contact_name:"EletroSul Comercial",  av:"LE", date:"2025-06-27", time:"09:00", type:"presencial", status:"pending",   origin:"platform", notes:"" },
+  { id:"ag4",  contact_id:"c5", contact_name:"AutoPeças Central",    av:"AC", date:"2025-06-27", time:"14:30", type:"phone",      status:"confirmed", origin:"erp",      notes:"Follow-up rolamentos" },
+  { id:"ag5",  contact_id:"c3", contact_name:"Ferragens Monteiro",   av:"JM", date:"2025-06-30", time:"11:00", type:"presencial", status:"pending",   origin:"platform", notes:"Proposta de parceria mensal" },
+  { id:"ag6",  contact_id:"c2", contact_name:"Distribuidora Alves",  av:"CA", date:"2025-07-01", time:"16:00", type:"videocall",  status:"confirmed", origin:"erp",      notes:"" },
+  { id:"ag7",  contact_id:"c4", contact_name:"Grupo Savassi",        av:"MS", date:"2025-07-02", time:"10:00", type:"presencial", status:"pending",   origin:"platform", notes:"Primeira visita — prospect" },
+];
+
+export const ANUNCIOS = [
+  { id:"an1", title:"Válvulas V200 em promoção",    type:"promocao",  status:"ativo",   sent:23, opened:18, converted:5, created:"20/06", message:"Olá {nome}! Temos uma oferta especial nas Válvulas V200 esta semana: 12% OFF nos kits acima de 5 unidades. Válido até sexta!" },
+  { id:"an2", title:"Lançamento: Rolamento 6208",    type:"lancamento",status:"ativo",   sent:15, opened:12, converted:3, created:"22/06", message:"Novidade no catálogo! Rolamento 6208 2RS disponível em estoque. Qualidade superior para cargas radiais pesadas. Peça já seu orçamento." },
+  { id:"an3", title:"Reativação — 60 dias sem compra",type:"reativacao",status:"rascunho",sent:0,  opened:0,  converted:0, created:"24/06", message:"Olá {nome}, sentimos sua falta! Han um tempo sem nos falar. Preparamos uma condição especial para seu próximo pedido. Posso te ajudar?" },
+  { id:"an4", title:"Kit Hidráulico — oferta especial",type:"promocao", status:"encerrado",sent:41,opened:35, converted:9, created:"10/06", message:"Kit Hidráulico Completo com 16% OFF! Mangueira + Conector por R$360. Estoque limitado." },
+];
+
+export const CAMPANHAS = [
+  { id:"cp1", name:"Prospecção Junho",    status:"ativa",    contacts:12, sent:8,  replied:3, converted:1, start:"01/06", channel:"whatsapp" },
+  { id:"cp2", name:"Reativação Q2",       status:"ativa",    contacts:7,  sent:7,  replied:4, converted:2, start:"15/06", channel:"whatsapp" },
+  { id:"cp3", name:"Lançamento Válvulas", status:"concluida",contacts:20, sent:20, replied:11,converted:4, start:"01/06", channel:"whatsapp" },
+  { id:"cp4", name:"Clientes VIP — Jul",  status:"rascunho", contacts:5,  sent:0,  replied:0, converted:0, start:"01/07", channel:"whatsapp" },
+];
+
+export const CADENCIAS = [
+  {
+    id:"cd1", name:"Onboarding novo cliente", status:"ativo", contacts:3,
+    steps:[
+      { day:0,  type:"whatsapp", label:"Boas-vindas + catálogo",           done:true  },
+      { day:3,  type:"whatsapp", label:"Verificar recebimento + dúvidas",   done:true  },
+      { day:7,  type:"visita",   label:"Visita presencial de apresentação", done:false },
+      { day:14, type:"whatsapp", label:"Proposta personalizada",            done:false },
+      { day:30, type:"whatsapp", label:"Follow-up pós-proposta",            done:false },
+    ]
+  },
+  {
+    id:"cd2", name:"Reativação — sem compra 60d", status:"ativo", contacts:2,
+    steps:[
+      { day:0, type:"whatsapp", label:"Mensagem de reaproximação",    done:true  },
+      { day:5, type:"whatsapp", label:"Oferta exclusiva",             done:false },
+      { day:12,type:"phone",    label:"Ligação de acompanhamento",    done:false },
+      { day:20,type:"whatsapp", label:"Última tentativa + desconto",  done:false },
+    ]
+  },
+];
+
+export const ERP_PRODUCTS_DETAIL = [
+  { ref:"VLV-200", name:"Válvula V200",            price:285,  stock:120, min:20,  unit:"un", category:"Válvulas",    lastSync:"há 5min", syncOk:true,  erpCode:"MVP-200-BR" },
+  { ref:"VLV-350", name:"Válvula V350 Industrial", price:490,  stock:44,  min:10,  unit:"un", category:"Válvulas",    lastSync:"há 5min", syncOk:true,  erpCode:"MVP-350-IN" },
+  { ref:"VLV-E12", name:"Válvula Esfera 1/2",      price:68,   stock:200, min:30,  unit:"un", category:"Válvulas",    lastSync:"há 5min", syncOk:true,  erpCode:"MVE-012-BR" },
+  { ref:"ROL-6205",name:"Rolamento 6205",           price:42,   stock:48,  min:10,  unit:"un", category:"Rolamentos",  lastSync:"há 5min", syncOk:true,  erpCode:"RLM-6205"  },
+  { ref:"ROL-6305",name:"Rolamento 6305",           price:58,   stock:12,  min:5,   unit:"un", category:"Rolamentos",  lastSync:"há 12min",syncOk:true,  erpCode:"RLM-6305"  },
+  { ref:"ROL-6208",name:"Rolamento 6208 2RS",       price:74,   stock:30,  min:8,   unit:"un", category:"Rolamentos",  lastSync:"há 12min",syncOk:true,  erpCode:"RLM-6208"  },
+  { ref:"PAR-M12", name:"Parafuso Sextavado M12",   price:1.80, stock:5000,min:500, unit:"cx", category:"Fixação",     lastSync:"há 1h",   syncOk:false, erpCode:"PAR-M12-CX"},
+  { ref:"PRC-M12", name:"Porca Sextavada M12",      price:0.90, stock:8000,min:800, unit:"cx", category:"Fixação",     lastSync:"há 1h",   syncOk:false, erpCode:"PRC-M12-CX"},
+  { ref:"COR-T5",  name:"Correia Dentada T5",       price:34,   stock:200, min:30,  unit:"un", category:"Transmissão", lastSync:"há 5min", syncOk:true,  erpCode:"COR-T5-STD"},
+  { ref:"POL-080", name:"Polia Alumínio 80mm",      price:87,   stock:60,  min:10,  unit:"un", category:"Transmissão", lastSync:"há 5min", syncOk:true,  erpCode:"POL-080-AL"},
+  { ref:"MAN-34",  name:"Mangueira Hidráulica 3/4", price:28.5, stock:300, min:50,  unit:"mt", category:"Hidráulico",  lastSync:"há 5min", syncOk:true,  erpCode:"MAN-034-HI"},
+  { ref:"CON-34",  name:"Conector Reto 3/4",        price:12,   stock:400, min:50,  unit:"un", category:"Hidráulico",  lastSync:"há 5min", syncOk:true,  erpCode:"CON-034-RT"},
+  { ref:"CAB-225", name:"Cabo PP 2x2.5mm",          price:8.90, stock:1000,min:100, unit:"mt", category:"Elétrico",    lastSync:"há 5min", syncOk:true,  erpCode:"CAB-225-PP"},
+  { ref:"DIS-20A", name:"Disjuntor DIN 20A",        price:32,   stock:150, min:20,  unit:"un", category:"Elétrico",    lastSync:"há 5min", syncOk:true,  erpCode:"DIS-20A-DI"},
+];
