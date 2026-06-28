@@ -9,67 +9,177 @@ const STAGE_LABEL= { closing:'Fechamento', negotiation:'Negociação', proposal:
 const STATUS_LABEL= { draft:'Rascunho', sent:'Enviado', confirmed:'Confirmado', invoiced:'Faturado', delivered:'Entregue', cancelled:'Cancelado', open:'Aberto', approved:'Aprovado', rejected:'Rejeitado', expired:'Expirado' }
 
 // ─── Auth screens ─────────────────────────────
-function LoginScreen({ onLogin, onDemo }) {
-  const [email, setEmail]   = useState('')
-  const [pw, setPw]         = useState('')
-  const [err, setErr]       = useState('')
+// ─── Email validation ────────────────────────────────────────────────────────
+const isValidEmail = e => /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(e.trim())
+
+function LoginScreen({ onLogin, onSignUp, onDemo }) {
+  const [mode, setMode]       = useState('login') // login | signup | done
+  const [name, setName]       = useState('')
+  const [email, setEmail]     = useState('')
+  const [pw, setPw]           = useState('')
+  const [pw2, setPw2]         = useState('')
+  const [err, setErr]         = useState({})
   const [loading, setLoading] = useState(false)
-  const [mode, setMode]     = useState('login') // login | signup
+
+  const validate = () => {
+    const e = {}
+    if (mode === 'signup' && name.trim().length < 2)
+      e.name = 'Nome deve ter ao menos 2 caracteres'
+    if (!isValidEmail(email))
+      e.email = 'E-mail inválido — use o formato nome@dominio.com'
+    if (pw.length < 6)
+      e.pw = 'Senha deve ter ao menos 6 caracteres'
+    if (mode === 'signup' && pw !== pw2)
+      e.pw2 = 'As senhas não coincidem'
+    return e
+  }
 
   const submit = async () => {
-    setErr(''); setLoading(true)
-    const { error } = mode==='login'
-      ? await onLogin(email, pw)
-      : await onLogin(email, pw, email.split('@')[0])
-    if (error) setErr(error.message)
+    const errs = validate()
+    if (Object.keys(errs).length) { setErr(errs); return }
+    setErr({}); setLoading(true)
+    if (mode === 'login') {
+      const { error } = await onLogin(email.trim(), pw)
+      if (error) setErr({ global: error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos' : error.message })
+    } else {
+      const { error } = await onSignUp(email.trim(), pw, name.trim())
+      if (error) setErr({ global: error.message })
+      else setMode('done')
+    }
     setLoading(false)
   }
 
-  return (
+  const Field = ({ id, label, type='text', value, onChange, placeholder, error, onKey }) => (
+    <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+      <label style={{ fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.5 }}>{label}</label>
+      <input
+        type={type} value={value} onChange={onChange} placeholder={placeholder}
+        onKeyDown={onKey}
+        style={{
+          padding:'11px 13px',
+          border:`1px solid ${error ? '#fca5a5' : B[200]}`,
+          background: error ? '#fff5f5' : B[50],
+          fontSize:13, color:B[800], outline:'none', fontFamily:'inherit',
+          boxShadow: error ? 'inset 0 0 0 1px #fca5a5' : 'none',
+        }}
+      />
+      {error && <div style={{ fontSize:11, color:'#dc2626', display:'flex', alignItems:'center', gap:4 }}>⚠ {error}</div>}
+    </div>
+  )
+
+  // ── E-mail confirmado ──
+  if (mode === 'done') return (
     <div style={{ minHeight:'100dvh', background:B[50], display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ width:'100%', maxWidth:380 }}>
-        {/* Logo */}
-        <div style={{ textAlign:'center', marginBottom:32 }}>
-          <img src="/logo.svg" alt="CRepresentante" style={{ height:48, objectFit:'contain' }}
-            onError={e=>{e.target.style.display='none'; e.target.nextSibling.style.display='block'}} />
-          <div style={{ display:'none', fontSize:22, fontWeight:900, color:B[800] }}>CRepresentante</div>
-          <div style={{ fontSize:13, color:B[500], marginTop:8 }}>CRM WhatsApp para representantes</div>
+      <div style={{ width:'100%', maxWidth:380, textAlign:'center' }}>
+        <div style={{ width:72, height:72, background:B[800], display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px' }}>
+          <Ic n="mail" s={36} c={B[0]} />
         </div>
-
-        <div style={{ background:B[0], border:`1px solid ${B[200]}`, padding:28 }}>
-          <div style={{ fontSize:15, fontWeight:800, color:B[800], marginBottom:20 }}>
-            {mode==='login' ? 'Entrar na conta' : 'Criar conta'}
-          </div>
-
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {mode==='signup' && (
-              <input placeholder="Nome completo" style={{ padding:'11px 13px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-            )}
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="E-mail"
-              style={{ padding:'11px 13px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-            <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Senha"
-              onKeyDown={e=>e.key==='Enter'&&submit()}
-              style={{ padding:'11px 13px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-
-            {err && <div style={{ fontSize:12, color:'#dc2626', background:'#fef2f2', padding:'8px 12px' }}>{err}</div>}
-
-            <button onClick={submit} disabled={loading} style={{ padding:'13px', background:B[800], color:B[0], border:'none', fontSize:14, fontWeight:800, cursor:'pointer', marginTop:4 }}>
-              {loading ? 'Aguarde...' : mode==='login' ? 'Entrar' : 'Criar conta'}
-            </button>
-
-            <div style={{ textAlign:'center', fontSize:12, color:B[500] }}>
-              {mode==='login' ? 'Não tem conta?' : 'Já tem conta?'}
-              {' '}<button onClick={()=>setMode(m=>m==='login'?'signup':'login')} style={{ background:'none', border:'none', color:B[600], fontWeight:700, cursor:'pointer', fontSize:12 }}>
-                {mode==='login' ? 'Criar agora' : 'Entrar'}
-              </button>
-            </div>
-          </div>
+        <div style={{ fontSize:20, fontWeight:900, color:B[800], marginBottom:10 }}>Confirme seu e-mail</div>
+        <div style={{ fontSize:14, color:B[600], lineHeight:1.7, marginBottom:8 }}>
+          Enviamos um link de confirmação para
         </div>
-
-        <button onClick={onDemo} style={{ width:'100%', marginTop:12, padding:'11px', background:'none', border:`1px solid ${B[300]}`, color:B[600], fontSize:13, fontWeight:600, cursor:'pointer' }}>
-          Acessar em modo demonstração →
+        <div style={{ fontSize:15, fontWeight:800, color:B[800], marginBottom:24 }}>{email}</div>
+        <div style={{ fontSize:12, color:B[500], lineHeight:1.6, background:B[100], border:`1px solid ${B[200]}`, padding:'12px 16px', marginBottom:24 }}>
+          Abra o e-mail e clique no link para ativar sua conta. Verifique também a caixa de spam.
+        </div>
+        <button onClick={()=>setMode('login')} style={{ width:'100%', padding:'12px', background:B[800], color:B[0], border:'none', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          Já confirmei — entrar
+        </button>
+        <button onClick={()=>{ setMode('signup'); setEmail(''); setPw(''); setPw2(''); setName('') }} style={{ width:'100%', marginTop:8, padding:'10px', background:'none', border:`1px solid ${B[300]}`, color:B[600], fontSize:12, cursor:'pointer' }}>
+          Usar outro e-mail
         </button>
       </div>
+    </div>
+  )
+
+  return (
+    <div style={{ minHeight:'100dvh', background:B[50], display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ width:'100%', maxWidth:400 }}>
+
+        {/* Logo */}
+        <div style={{ textAlign:'center', marginBottom:28 }}>
+          <img src="/logo.svg" alt="CRepresentante" style={{ height:44, objectFit:'contain' }}
+            onError={e=>{e.target.style.display='none'; e.target.nextSibling.style.display='block'}} />
+          <div style={{ display:'none', fontSize:20, fontWeight:900, color:B[800] }}>CRepresentante</div>
+          <div style={{ fontSize:12, color:B[500], marginTop:6 }}>CRM WhatsApp para representantes</div>
+        </div>
+
+        {/* Tab switcher */}
+        <div style={{ display:'flex', marginBottom:0, border:`1px solid ${B[200]}`, background:B[0] }}>
+          {[['login','Entrar'],['signup','Criar conta']].map(([id,lbl])=>(
+            <button key={id} onClick={()=>{ setMode(id); setErr({}) }} style={{
+              flex:1, padding:'12px', background:mode===id?B[800]:B[0],
+              color:mode===id?B[0]:B[600], border:'none', cursor:'pointer',
+              fontSize:13, fontWeight:700, letterSpacing:.3,
+            }}>{lbl}</button>
+          ))}
+        </div>
+
+        <div style={{ background:B[0], border:`1px solid ${B[200]}`, borderTop:'none', padding:'24px 24px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+
+          {err.global && (
+            <div style={{ fontSize:12, color:'#dc2626', background:'#fef2f2', border:'1px solid #fca5a5', padding:'10px 14px', display:'flex', gap:8, alignItems:'center' }}>
+              <span style={{ fontSize:14 }}>⚠</span> {err.global}
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <Field label="Nome completo" value={name} onChange={e=>setName(e.target.value)} placeholder="Ex: Carlos Souza" error={err.name} />
+          )}
+
+          <Field label="E-mail" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErr(v=>({...v,email:undefined}))}} placeholder="seu@email.com.br" error={err.email} />
+
+          {email && !isValidEmail(email) && (
+            <div style={{ fontSize:11, color:B[500], marginTop:-10, background:B[100], padding:'6px 10px', borderLeft:`2px solid ${B[400]}` }}>
+              Formato: nome@empresa.com.br
+            </div>
+          )}
+
+          <Field label="Senha" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder={mode==='signup'?'Mínimo 6 caracteres':'Sua senha'} error={err.pw}
+            onKey={mode==='login'?e=>e.key==='Enter'&&submit():undefined} />
+
+          {mode === 'signup' && (
+            <Field label="Confirmar senha" type="password" value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="Repita a senha" error={err.pw2}
+              onKey={e=>e.key==='Enter'&&submit()} />
+          )}
+
+          {mode === 'signup' && (
+            <div style={{ fontSize:11, color:B[500], background:B[50], border:`1px solid ${B[150]}`, padding:'8px 12px', lineHeight:1.6 }}>
+              Ao criar a conta você receberá um e-mail de confirmação. O link expira em 24h.
+            </div>
+          )}
+
+          <button onClick={submit} disabled={loading} style={{
+            padding:'13px', background: loading ? B[400] : B[800], color:B[0],
+            border:'none', fontSize:14, fontWeight:800, cursor: loading ? 'default' : 'pointer',
+            marginTop:4, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            opacity: loading ? .8 : 1,
+          }}>
+            {loading
+              ? <><span style={{ width:16, height:16, border:`2px solid rgba(255,255,255,0.4)`, borderTop:`2px solid ${B[0]}`, borderRadius:'50%', animation:'spin 1s linear infinite', display:'inline-block' }} /> Aguarde...</>
+              : mode==='login' ? 'Entrar na conta' : 'Criar conta grátis'
+            }
+          </button>
+
+          {mode === 'login' && (
+            <button style={{ background:'none', border:'none', color:B[500], fontSize:11, cursor:'pointer', textDecoration:'underline', padding:0 }}>
+              Esqueci minha senha
+            </button>
+          )}
+        </div>
+
+        <div style={{ height:1, background:B[200], margin:'18px 0' }} />
+
+        <button onClick={onDemo} style={{ width:'100%', padding:'11px', background:B[0], border:`1px solid ${B[300]}`, color:B[600], fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          <Ic n="chevR" s={14} c={B[400]} /> Acessar em modo demonstração (sem cadastro)
+        </button>
+
+        <div style={{ textAlign:'center', fontSize:11, color:B[400], marginTop:16 }}>
+          Ao usar o CRepresentante você concorda com os<br/>
+          <span style={{ color:B[600], cursor:'pointer', textDecoration:'underline' }}>Termos de Uso</span> e <span style={{ color:B[600], cursor:'pointer', textDecoration:'underline' }}>Política de Privacidade</span>
+        </div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }
@@ -1132,10 +1242,8 @@ export default function App() {
 
   if (!authenticated) return (
     <LoginScreen
-      onLogin={async (email, pw) => {
-        const r = await signIn(email, pw)
-        return r
-      }}
+      onLogin={signIn}
+      onSignUp={signUp}
       onDemo={() => setDemo(true)}
     />
   )
