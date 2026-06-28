@@ -111,6 +111,16 @@ export function useAppData(userId) {
   }, [isDemo, userId, orders, contacts])
 
   // Update contact stage
+  const addContact = useCallback((contact) => {
+    const av = (contact.name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
+    setContacts(prev => [...prev, {
+      id: 'c_' + Date.now(),
+      av, stage:'prospect', tags:[], pipeline_value:0,
+      last_contact_at:'Hoje', notes:'',
+      ...contact
+    }])
+  }, [])
+
   const updateContactStage = useCallback(async (contactId, stage) => {
     setContacts(prev => prev.map(c => c.id===contactId ? { ...c, stage } : c))
     if (!isDemo) await sbContacts.update(contactId, { stage })
@@ -121,7 +131,7 @@ export function useAppData(userId) {
     orders, quotes, visits, messages, stats: MOCK.stats,
     monthData: MOCK.monthData, weekData: MOCK.weekData,
     paymentTerms: MOCK.payment_terms, deliveryOptions: MOCK.delivery_options,
-    addMessage, createOrder, updateContactStage,
+    addMessage, createOrder, updateContactStage, addContact,
   }
 }
 
