@@ -1,2172 +1,1013 @@
-import { useState, useRef, useEffect } from 'react'
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { B, Ic, Av, Tag, tagVariant, fmt, pct, MOCK, AGENDA, ANUNCIOS, CAMPANHAS, CADENCIAS, ERP_PRODUCTS_DETAIL } from './lib/data.jsx'
-import { useIsMobile, useAuth, useAppData } from './hooks/useApp.js'
+import { useState, useRef, useEffect } from "react";
+import {
+  MessageSquare, BarChart2, Home, ShoppingCart, Search, Bell, Plus,
+  Calendar, FileText, CheckCircle, TrendingUp, Send, MoreVertical,
+  Paperclip, DollarSign, Target, Users, X, Menu, Zap, Smartphone,
+  Wifi, WifiOff, RefreshCw, Settings,
+} from "lucide-react";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
-// ─── Constants ────────────────────────────────
-const STAGES     = ['closing','negotiation','proposal','qualified','prospect']
-const STAGE_LABEL= { closing:'Fechamento', negotiation:'Negociação', proposal:'Proposta', qualified:'Qualificado', prospect:'Prospect' }
-const STATUS_LABEL= { draft:'Rascunho', sent:'Enviado', confirmed:'Confirmado', invoiced:'Faturado', delivered:'Entregue', cancelled:'Cancelado', open:'Aberto', approved:'Aprovado', rejected:'Rejeitado', expired:'Expirado' }
+// ── Brand tokens ───────────────────────────────────────────────────────────────
+const C = {
+  ink: "#0A1628", inkMid: "#122038", inkLight: "#1A2F4A",
+  green: "#00C853", greenDark: "#00963D", greenBg: "#E6FFF2",
+  orange: "#FF6B35", orangeBg: "#FFF2EE",
+  gold: "#F5A623", goldBg: "#FFF8E7",
+  surface: "#F4F6FA", card: "#FFFFFF",
+  border: "#E8ECF0", text: "#1A2332", muted: "#6B7A8E",
+  red: "#FF3B30", redBg: "#FFF0F0", blue: "#3A7BFF",
+};
 
-// ─── Auth screens ─────────────────────────────
-// ─── Email validation ────────────────────────────────────────────────────────
-const isValidEmail = e => /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test((e||'').trim())
+// ── Mock data ──────────────────────────────────────────────────────────────────
+const conversations = [
+  { id: 0, name: "Elétrica Horizonte", avatar: "EH", lastMsg: "Preciso de 200 unidades do cabo PP4mm", time: "14:32", unread: 3, tag: "Negociação", city: "Belo Horizonte · MG" },
+  { id: 1, name: "Construções Moreira", avatar: "CM", lastMsg: "Qual o prazo de entrega?", time: "12:15", unread: 0, tag: "Proposta", city: "Contagem · MG" },
+  { id: 2, name: "TechBuild Engenharia", avatar: "TB", lastMsg: "✓✓ Ok, aguardo o orçamento", time: "11:08", unread: 0, tag: "Orçamento", city: "Betim · MG" },
+  { id: 3, name: "Supermercado Bela Vista", avatar: "SB", lastMsg: "Preciso do catálogo atualizado", time: "09:44", unread: 1, tag: "Prospect", city: "Vespasiano · MG" },
+  { id: 4, name: "Indústria Prata Ltda", avatar: "IP", lastMsg: "✓ Certo, te ligo amanhã", time: "Ontem", unread: 0, tag: "Fechado", city: "Santa Luzia · MG" },
+  { id: 5, name: "Distribuidora Roma", avatar: "DR", lastMsg: "Preciso falar sobre o contrato", time: "Ontem", unread: 2, tag: "Ativo", city: "Sabará · MG" },
+];
 
-// Field defined OUTSIDE LoginScreen to avoid remount on every keystroke
-const AuthField = ({ label, type='text', value, onChange, placeholder, error, onKey, hint }) => (
-  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-    <label style={{ fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.5 }}>{label}</label>
-    <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKey}
-      placeholder={placeholder}
-      autoComplete={type==='password'?'current-password':type==='email'?'email':'name'}
-      style={{
-        padding:'12px 13px',
-        border:`1px solid ${error ? '#fca5a5' : B[200]}`,
-        background: error ? '#fff5f5' : B[50],
-        fontSize:14, color:B[800], outline:'none', fontFamily:'inherit',
-        WebkitAppearance:'none', borderRadius:0,
-      }}
-    />
-    {error && <div style={{ fontSize:11, color:'#dc2626' }}>⚠ {error}</div>}
-    {hint && !error && <div style={{ fontSize:11, color:B[500] }}>{hint}</div>}
-  </div>
-)
+const initMsgs = [
+  { id: 1, from: "client", text: "Bom dia! Tudo bem?", time: "08:00" },
+  { id: 2, from: "rep", text: "Bom dia! Tudo ótimo, e você?", time: "08:02" },
+  { id: 3, from: "client", text: "Preciso de 200 unidades do cabo PP 4mm. Vocês têm em estoque?", time: "08:05" },
+  { id: 4, from: "rep", text: "Sim! Temos em estoque. Deixa eu verificar o preço para você.", time: "08:07" },
+  { id: 5, from: "client", text: "Ótimo! Me manda um orçamento com prazo de entrega.", time: "08:09" },
+  { id: 6, from: "system", text: "Orçamento #ORC-2847 enviado via plataforma", time: "08:15" },
+  { id: 7, from: "client", text: "Recebi! Tem desconto para acima de 500 unidades?", time: "08:20" },
+  { id: 8, from: "rep", text: "Sim! Para acima de 500 unidades damos 8% de desconto.", time: "08:23" },
+  { id: 9, from: "client", text: "Preciso de mais 200 unidades do cabo PP4mm e verificar o preço dos disjuntores 100A", time: "14:32" },
+];
 
-function LoginScreen({ onLogin, onSignUp, onDemo }) {
-  const [mode, setMode]       = useState('login') // login | signup
-  const [name, setName]       = useState('')
-  const [email, setEmail]     = useState('')
-  const [pw, setPw]           = useState('')
-  const [pw2, setPw2]         = useState('')
-  const [errs, setErrs]       = useState({})
-  const [loading, setLoading] = useState(false)
+const erpProducts = [
+  { id: 1, code: "CAB-PP4", name: "Cabo PP 4mm²", unit: "rolo", price: 89.90, stock: 847 },
+  { id: 2, code: "CAB-PP6", name: "Cabo PP 6mm²", unit: "rolo", price: 124.50, stock: 312 },
+  { id: 3, code: "DIS-100A", name: "Disjuntor 100A", unit: "un", price: 67.80, stock: 234 },
+  { id: 4, code: "DIS-50A", name: "Disjuntor 50A", unit: "un", price: 42.30, stock: 567 },
+  { id: 5, code: "TOM-IND", name: "Tomada Industrial 32A", unit: "un", price: 38.90, stock: 189 },
+  { id: 6, code: "CON-FLX", name: "Conduíte Flexível 3/4\"", unit: "m", price: 8.70, stock: 2100 },
+];
 
-  const validate = () => {
-    const e = {}
-    if (mode === 'signup' && name.trim().length < 2)
-      e.name = 'Digite seu nome completo'
-    if (!isValidEmail(email))
-      e.email = 'E-mail inválido — ex: nome@empresa.com.br'
-    if (pw.length < 6)
-      e.pw = 'Senha deve ter ao menos 6 caracteres'
-    if (mode === 'signup' && pw !== pw2)
-      e.pw2 = 'As senhas não coincidem'
-    return e
-  }
+const monthlyData = [
+  { mes: "Jan", receita: 128, meta: 150 },
+  { mes: "Fev", receita: 165, meta: 150 },
+  { mes: "Mar", receita: 142, meta: 160 },
+  { mes: "Abr", receita: 189, meta: 170 },
+  { mes: "Mai", receita: 203, meta: 180 },
+  { mes: "Jun", receita: 178, meta: 185 },
+];
 
-  const switchMode = m => { setMode(m); setErrs({}); }
+const topProducts = [
+  { produto: "Cabo PP 4mm", valor: 42.3 },
+  { produto: "Disjuntor 100A", valor: 38.1 },
+  { produto: "Tomada Ind.", valor: 31.5 },
+  { produto: "Conduíte Flex", valor: 27.8 },
+  { produto: "Painel Elét.", valor: 24.2 },
+];
 
-  const submit = async () => {
-    const e = validate()
-    if (Object.keys(e).length) { setErrs(e); return }
-    setErrs({}); setLoading(true)
+const funnelData = [
+  { estagio: "Contatos", qtd: 142, color: C.blue },
+  { estagio: "Visitas", qtd: 87, color: C.green },
+  { estagio: "Propostas", qtd: 54, color: C.gold },
+  { estagio: "Negociação", qtd: 31, color: C.orange },
+  { estagio: "Fechados", qtd: 18, color: C.greenDark },
+];
 
-    if (mode === 'login') {
-      const { error } = await onLogin(email.trim(), pw)
-      if (error) setErrs({ global: 'E-mail ou senha incorretos' })
-    } else {
-      const { error } = await onSignUp(email.trim(), pw, name.trim())
-      if (error) {
-        setErrs({ global: error.message.includes('already') ? 'E-mail já cadastrado. Faça login.' : error.message })
-      } else {
-        // Auto-login after signup
-        const { error: loginErr } = await onLogin(email.trim(), pw)
-        if (loginErr) setErrs({ global: 'Conta criada! Faça login com suas credenciais.' })
-      }
-    }
-    setLoading(false)
-  }
+const visits = [
+  { client: "Elétrica Horizonte", time: "09:00", date: "Hoje", type: "Visita presencial" },
+  { client: "TechBuild Engenharia", time: "14:00", date: "Hoje", type: "Vídeo chamada" },
+  { client: "Construções Moreira", time: "10:30", date: "Amanhã", type: "Visita presencial" },
+  { client: "Indústria Prata", time: "15:00", date: "25/06", type: "Vídeo chamada" },
+];
 
-  return (
-    <div style={{ minHeight:'100dvh', background:B[50], display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ width:'100%', maxWidth:400 }}>
+const pendingQuotes = [
+  { client: "TechBuild Engenharia", value: "R$ 12.450", deadline: "Hoje", urgent: true },
+  { client: "Supermercado Bela Vista", value: "R$ 7.890", deadline: "Amanhã", urgent: false },
+  { client: "Distribuidora Roma", value: "R$ 34.200", deadline: "26/06", urgent: false },
+];
 
-        {/* Logo */}
-        <div style={{ textAlign:'center', marginBottom:28 }}>
-          <img src="/logo.svg" alt="CRepresentante" style={{ height:44, objectFit:'contain' }}
-            onError={e=>{e.target.style.display='none'; e.target.nextSibling.style.display='block'}} />
-          <div style={{ display:'none', fontSize:20, fontWeight:900, color:B[800] }}>CRepresentante</div>
-          <div style={{ fontSize:12, color:B[500], marginTop:6 }}>CRM WhatsApp para representantes</div>
-        </div>
+const contracts = [
+  { client: "Indústria Prata", value: "R$ 58.000", prob: 85, stage: "Proposta aceita" },
+  { client: "Construções Moreira", value: "R$ 23.500", prob: 60, stage: "Negociação" },
+  { client: "Roma Distribuidora", value: "R$ 41.800", prob: 40, stage: "Em análise" },
+];
 
-        {/* Tabs */}
-        <div style={{ display:'flex', border:`1px solid ${B[200]}` }}>
-          {[['login','Entrar'],['signup','Criar conta']].map(([id,lbl])=>(
-            <button key={id} onClick={()=>switchMode(id)} style={{
-              flex:1, padding:'12px', background:mode===id?B[800]:B[0],
-              color:mode===id?B[0]:B[600], border:'none', cursor:'pointer',
-              fontSize:13, fontWeight:700, letterSpacing:.2,
-            }}>{lbl}</button>
-          ))}
-        </div>
+const tagColor = {
+  Negociação: { bg: C.orangeBg, text: C.orange },
+  Proposta: { bg: C.goldBg, text: C.gold },
+  Orçamento: { bg: "#EEF2FF", text: C.blue },
+  Prospect: { bg: C.surface, text: C.muted },
+  Fechado: { bg: C.greenBg, text: C.greenDark },
+  Ativo: { bg: C.greenBg, text: C.greenDark },
+};
 
-        <div style={{ background:B[0], border:`1px solid ${B[200]}`, borderTop:'none', padding:'22px 22px 18px', display:'flex', flexDirection:'column', gap:14 }}>
+// ── Root ───────────────────────────────────────────────────────────────────────
+export default function CRepresentante() {
+  const [page, setPage] = useState("landing");
+  const [appView, setAppView] = useState("home");
+  const [selectedConv, setSelectedConv] = useState(0);
+  const [assistedTab, setAssistedTab] = useState("compra");
+  const [chatInput, setChatInput] = useState("");
+  const [msgs, setMsgs] = useState(initMsgs);
+  const [cartItems, setCartItems] = useState([{ ...erpProducts[0], qty: 200 }]);
+  const [searchProd, setSearchProd] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
+  const [waStatus, setWaStatus] = useState("disconnected");
+  const messagesEndRef = useRef(null);
 
-          {errs.global && (
-            <div style={{ fontSize:12, color:'#dc2626', background:'#fef2f2', border:'1px solid #fca5a5', padding:'10px 14px' }}>
-              ⚠ {errs.global}
-            </div>
-          )}
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-          {mode === 'signup' && (
-            <AuthField
-              label="Nome completo"
-              value={name}
-              onChange={e=>setName(e.target.value)}
-              placeholder="Ex: Carlos Souza"
-              error={errs.name}
-            />
-          )}
+  const addToCart = (p) =>
+    setCartItems((prev) => {
+      const exists = prev.find((i) => i.id === p.id);
+      return exists ? prev.map((i) => (i.id === p.id ? { ...i, qty: i.qty + 1 } : i)) : [...prev, { ...p, qty: 1 }];
+    });
 
-          <AuthField
-            label="E-mail"
-            type="email"
-            value={email}
-            onChange={e=>{ setEmail(e.target.value); setErrs(v=>({...v,email:undefined,global:undefined})) }}
-            placeholder="seu@email.com.br"
-            error={errs.email}
-            hint={email && !isValidEmail(email) ? 'Formato: nome@dominio.com.br' : undefined}
-          />
+  const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
 
-          <AuthField
-            label="Senha"
-            type="password"
-            value={pw}
-            onChange={e=>setPw(e.target.value)}
-            placeholder={mode==='signup'?'Mínimo 6 caracteres':'Sua senha'}
-            error={errs.pw}
-            onKey={mode==='login'?e=>e.key==='Enter'&&submit():undefined}
-          />
+  const sendMessage = () => {
+    if (!chatInput.trim()) return;
+    setMsgs((prev) => [...prev, { id: Date.now(), from: "rep", text: chatInput, time: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }]);
+    setChatInput("");
+  };
 
-          {mode === 'signup' && (
-            <AuthField
-              label="Confirmar senha"
-              type="password"
-              value={pw2}
-              onChange={e=>setPw2(e.target.value)}
-              placeholder="Repita a senha"
-              error={errs.pw2}
-              onKey={e=>e.key==='Enter'&&submit()}
-            />
-          )}
+  const filteredProducts = erpProducts.filter(
+    (p) => p.name.toLowerCase().includes(searchProd.toLowerCase()) || p.code.toLowerCase().includes(searchProd.toLowerCase())
+  );
 
-          <button
-            onClick={submit}
-            disabled={loading}
-            style={{
-              padding:'13px', background:loading?B[400]:B[800], color:B[0],
-              border:'none', fontSize:14, fontWeight:800,
-              cursor:loading?'default':'pointer', marginTop:4,
-              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-            }}
-          >
-            {loading ? 'Aguarde...' : mode==='login' ? 'Entrar' : 'Criar conta grátis'}
-          </button>
-        </div>
+  if (page === "landing") return <LandingPage onEnter={() => setPage("app")} />;
 
-        <div style={{ height:1, background:B[200], margin:'16px 0' }} />
+  const navItems = [
+    { id: "home", icon: Home, label: "Início" },
+    { id: "chat", icon: MessageSquare, label: "Conversas", badge: 6 },
+    { id: "analytics", icon: BarChart2, label: "Gestão" },
+    { id: "orders", icon: ShoppingCart, label: "Pedidos" },
+    { id: "whatsapp", icon: Smartphone, label: "WhatsApp" },
+  ];
 
-        <button onClick={onDemo} style={{
-          width:'100%', padding:'11px', background:B[0],
-          border:`1px solid ${B[300]}`, color:B[600],
-          fontSize:13, fontWeight:600, cursor:'pointer',
-        }}>
-          Acessar em modo demonstração →
-        </button>
-      </div>
-    </div>
-  )
-}
-
-
-// ─── Shared: KpiCard ─────────────────────────
-const KpiCard = ({ label, value, sub, icon, delta, accent=false }) => (
-  <div style={{ background:B[0], borderTop:`3px solid ${accent?B[800]:B[200]}`, border:`1px solid ${B[150]}`, padding:'16px 18px' }}>
-    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
-      <span style={{ fontSize:10, color:B[500], fontWeight:700, textTransform:'uppercase', letterSpacing:.6 }}>{label}</span>
-      <Ic n={icon} s={16} c={B[400]} />
-    </div>
-    <div style={{ fontSize:24, fontWeight:900, color:B[800], letterSpacing:-1 }}>{value}</div>
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:6 }}>
-      <span style={{ fontSize:11, color:B[500] }}>{sub}</span>
-      {delta && <span style={{ fontSize:10, fontWeight:700, padding:'2px 7px', background:B[150], color:B[700] }}>{delta}</span>}
-    </div>
-  </div>
-)
-
-// ─── Shared: OrderPanel (used on both mobile+desktop) ─────────────────────────
-function OrderPanel({ contact, products, promotions, combos, paymentTerms, deliveryOptions, onSend, compact=false }) {
-  const [cart, setCart]         = useState({})
-  const [cat, setCat]           = useState('Todos')
-  const [search, setSearch]     = useState('')
-  const [pay, setPay]           = useState('30/60')
-  const [del, setDel]           = useState('5 dias úteis')
-  const [notes, setNotes]       = useState('')
-  const [screen, setScreen]     = useState('catalog')
-  const [flash, setFlash]       = useState({})
-  const [done, setDone]         = useState(false)
-  const cats = ['Todos', ...[...new Set(products.map(p=>p.category))]]
-  const lines = Object.entries(cart).filter(([,q])=>q>0)
-  const count = lines.reduce((a,[,q])=>a+q,0)
-  const total = lines.reduce((a,[id,q])=>a+(products.find(p=>p.id===id)?.price||0)*q,0)
-  const filtered = products.filter(p=>(cat==='Todos'||p.category===cat)&&(p.name.toLowerCase().includes(search.toLowerCase())||p.ref?.toLowerCase().includes(search.toLowerCase())))
-  const add = id=>{setCart(c=>({...c,[id]:(c[id]||0)+1}));setFlash(f=>({...f,[id]:true}));setTimeout(()=>setFlash(f=>({...f,[id]:false})),500)}
-  const setQty=(id,q)=>q<=0?setCart(c=>(({[id]:_,...r})=>r)(c)):setCart(c=>({...c,[id]:q}))
-  const addCombo=cb=>cb.items.forEach(({pid,q})=>setCart(c=>({...c,[pid]:(c[pid]||0)+q})))
-  const submit=async()=>{const items=lines.map(([id,q])=>{const p=products.find(x=>x.id===id);return{...p,qty:q}});await onSend?.(contact,items,{paymentTerms:pay,deliveryDays:del,notes});setDone(true);setTimeout(()=>{setCart({});setScreen('catalog');setDone(false)},2500)}
-
-  if (done) return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:40, gap:16, textAlign:'center' }}>
-      <div style={{ width:64, height:64, background:B[800], display:'flex', alignItems:'center', justifyContent:'center' }}><Ic n="check" s={32} c={B[0]} /></div>
-      <div style={{ fontSize:18, fontWeight:900, color:B[800] }}>Pedido enviado!</div>
-      <div style={{ fontSize:24, fontWeight:900, color:B[500], fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</div>
-      <div style={{ fontSize:12, color:B[500] }}>{pay} · {del}</div>
-    </div>
-  )
-
-  // Checkout screen
-  if (screen==='checkout') return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <div style={{ padding:'14px 16px', borderBottom:`1px solid ${B[150]}`, display:'flex', alignItems:'center', gap:10 }}>
-        <button onClick={()=>setScreen('catalog')} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="back" s={20} c={B[800]} /></button>
-        <span style={{ fontSize:14, fontWeight:800, color:B[800] }}>Finalizar — {fmt(total)}</span>
-      </div>
-      <div style={{ flex:1, overflowY:'auto', padding:16, display:'flex', flexDirection:'column', gap:14 }}>
-        {/* Resumo */}
-        <div style={{ background:B[50], borderTop:`3px solid ${B[800]}`, border:`1px solid ${B[150]}`, padding:'12px 14px' }}>
-          {lines.map(([id,q])=>{const p=products.find(x=>x.id===id);return(<div key={id} style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}><span style={{ color:B[700] }}>{q}× {p?.name}</span><span style={{ fontWeight:700, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt((p?.price||0)*q)}</span></div>)})}
-          <div style={{ display:'flex', justifyContent:'space-between', paddingTop:8, borderTop:`1px solid ${B[200]}`, marginTop:6 }}><span style={{ fontSize:14, fontWeight:800, color:B[800] }}>Total</span><span style={{ fontSize:16, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</span></div>
-        </div>
-        {/* Pagamento */}
-        <div><div style={{ fontSize:10, fontWeight:800, color:B[700], textTransform:'uppercase', letterSpacing:.7, marginBottom:8 }}>Pagamento</div><div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>{paymentTerms.map(t=>(<button key={t} onClick={()=>setPay(t)} style={{ padding:'10px 4px', fontSize:11, fontWeight:700, cursor:'pointer', background:pay===t?B[800]:B[0], color:pay===t?B[0]:B[600], border:`1px solid ${pay===t?B[800]:B[200]}` }}>{t}</button>))}</div></div>
-        {/* Entrega */}
-        <div><div style={{ fontSize:10, fontWeight:800, color:B[700], textTransform:'uppercase', letterSpacing:.7, marginBottom:8 }}>Entrega</div><div style={{ display:'flex', flexDirection:'column', gap:5 }}>{deliveryOptions.map(d=>(<button key={d} onClick={()=>setDel(d)} style={{ padding:'11px 14px', fontSize:12, fontWeight:600, cursor:'pointer', textAlign:'left', background:del===d?B[800]:B[0], color:del===d?B[0]:B[700], border:`1px solid ${del===d?B[800]:B[200]}` }}>{d}</button>))}</div></div>
-        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="Observações..." style={{ padding:'10px 12px', border:`1px solid ${B[200]}`, fontSize:12, outline:'none', fontFamily:'inherit', resize:'none', background:B[50] }} />
-      </div>
-      <div style={{ padding:'12px 16px', borderTop:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', gap:7 }}>
-        <button onClick={submit} style={{ padding:'14px', background:B[800], color:B[0], border:'none', fontSize:13, fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}><Ic n="send" s={15} c={B[0]} /> Confirmar e enviar</button>
-        <button onClick={submit} style={{ padding:'10px', background:B[0], color:B[600], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}><span style={{ fontSize:8, fontWeight:900, background:B[800], color:B[0], padding:'2px 5px' }}>ERP</span> Somente ERP</button>
-      </div>
-    </div>
-  )
+  const viewLabel = { home: "Início", chat: "Conversas", analytics: "Gestão", orders: "Pedidos", whatsapp: "Conexão WhatsApp" };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', minHeight:0 }}>
-      {/* Search + client info */}
-      {contact && <div style={{ padding:'10px 14px', background:B[800], borderBottom:`1px solid ${B[700]}` }}>
-        <div style={{ fontSize:12, fontWeight:700, color:B[0] }}>{contact.name}</div>
-        <div style={{ fontSize:10, color:B[300] }}>{contact.company}</div>
-      </div>}
-      <div style={{ padding:'8px 12px', borderBottom:`1px solid ${B[150]}`, background:B[0] }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'8px 12px' }}>
-          <Ic n="search" s={15} c={B[400]} />
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar produto ou código..." style={{ border:'none', background:'none', outline:'none', fontSize:13, color:B[800], flex:1, fontFamily:'inherit' }} />
-          {search && <button onClick={()=>setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', display:'flex' }}><Ic n="x" s={14} c={B[400]} /></button>}
+    <div style={{ display: "flex", height: "100vh", background: C.surface, fontFamily: "'Inter',-apple-system,sans-serif", overflow: "hidden" }}>
+      {/* ── Sidebar ── */}
+      <aside style={{ width: collapsed ? 60 : 216, background: C.ink, display: "flex", flexDirection: "column", transition: "width .2s", flexShrink: 0 }}>
+        <div style={{ padding: "18px 12px", borderBottom: `1px solid ${C.inkLight}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 34, height: 34, background: C.green, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <MessageSquare size={17} color={C.ink} />
+          </div>
+          {!collapsed && (
+            <div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>C<span style={{ color: C.green }}>Representante</span></div>
+              <div style={{ color: "#64748B", fontSize: 10 }}>WhatsApp CRM</div>
+            </div>
+          )}
         </div>
-      </div>
 
-      <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
-        {/* Promos */}
-        {!search && promotions.length>0 && (
-          <div style={{ padding:'10px 0 4px' }}>
-            <div style={{ padding:'0 12px', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}><Ic n="zap" s={13} c={B[800]} /><span style={{ fontSize:10, fontWeight:800, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Promoções</span></div>
-            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'thin', scrollbarColor:`${B[200]} transparent`, padding:'0 12px 12px' }}>
-              {promotions.map(pr=>(
-                <div key={pr.id} style={{ flexShrink:0, width:200, background:B[800], padding:'12px', position:'relative' }}>
-                  <div style={{ position:'absolute', top:0, right:0, background:B[500], padding:'4px 8px', fontSize:9, fontWeight:900, color:B[0] }}>{pr.badge}</div>
-                  <div style={{ fontSize:12, fontWeight:800, color:B[0], marginTop:8, marginBottom:3 }}>{pr.title}</div>
-                  <div style={{ fontSize:10, color:B[300], marginBottom:10 }}>{pr.description}</div>
-                  <button onClick={()=>pr.product_ids?.forEach(add)} style={{ padding:'7px 12px', background:B[0], color:B[800], border:'none', fontSize:10, fontWeight:800, cursor:'pointer' }}>+ Adicionar</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {/* Combos */}
-        {!search && combos.length>0 && (
-          <div style={{ padding:'4px 0 6px' }}>
-            <div style={{ padding:'0 12px', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}><Ic n="tag" s={13} c={B[800]} /><span style={{ fontSize:10, fontWeight:800, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Combos</span></div>
-            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'thin', scrollbarColor:`${B[200]} transparent`, padding:'0 12px 12px' }}>
-              {combos.map(cb=>(
-                <div key={cb.id} style={{ flexShrink:0, width:170, background:B[0], border:`1px solid ${B[200]}`, borderTop:`3px solid ${B[800]}`, padding:'10px' }}>
-                  <div style={{ fontSize:9, fontWeight:800, color:B[500], textTransform:'uppercase', marginBottom:3 }}>{cb.tag}</div>
-                  <div style={{ fontSize:11, fontWeight:800, color:B[800], marginBottom:5 }}>{cb.name}</div>
-                  <div style={{ fontSize:16, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums', marginBottom:8 }}>{fmt(cb.combo_price)}</div>
-                  <button onClick={()=>addCombo(cb)} style={{ width:'100%', padding:'8px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:800, cursor:'pointer' }}>+ Combo</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {/* Cats */}
-        <div style={{ background:B[0], borderTop:`1px solid ${B[150]}`, borderBottom:`1px solid ${B[150]}`, position:'sticky', top:0, zIndex:5 }}>
-          <div style={{ display:'flex', overflowX:'auto', scrollbarWidth:'none' }}>
-            {cats.map(c=>(<button key={c} onClick={()=>setCat(c)} style={{ flexShrink:0, padding:'10px 12px', background:'none', border:'none', cursor:'pointer', fontSize:11, fontWeight:700, whiteSpace:'nowrap', color:cat===c?B[800]:B[400], borderBottom:cat===c?`2px solid ${B[800]}`:'2px solid transparent', marginBottom:-1 }}>{c}</button>))}
-          </div>
-        </div>
-        {/* Product grid */}
-        <div style={{ display:'grid', gridTemplateColumns:compact?'1fr':'1fr 1fr', gap:6, padding:8, paddingBottom:count>0?80:20 }}>
-          {filtered.map(p=>{
-            const q=cart[p.id]||0,fl=flash[p.id],low=p.stock<20
+        <nav style={{ flex: 1, padding: "10px 8px" }}>
+          {navItems.map((item) => {
+            const active = appView === item.id;
             return (
-              <div key={p.id} style={{ background:B[0], border:`1px solid ${q>0?B[800]:B[200]}`, borderTop:`3px solid ${q>0?B[800]:B[150]}`, padding:'10px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <span style={{ fontSize:9, color:B[400], fontFamily:'monospace', fontWeight:700 }}>{p.ref}</span>
-                  {q>0&&<span style={{ fontSize:9, fontWeight:900, background:B[800], color:B[0], padding:'1px 5px' }}>{q}</span>}
-                </div>
-                <div style={{ fontSize:11, fontWeight:700, color:B[800], lineHeight:1.3, marginBottom:6 }}>{p.name}</div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:8 }}>
-                  <div><div style={{ fontSize:14, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(p.price)}</div><div style={{ fontSize:9, color:B[400] }}>/{p.unit}</div></div>
-                  {low&&<span style={{ fontSize:8, fontWeight:700, color:'#b45309', background:'#fff7ed', padding:'2px 4px' }}>⚠{p.stock}</span>}
-                </div>
-                {q===0
-                  ?<button onClick={()=>add(p.id)} style={{ width:'100%', padding:'9px 0', background:fl?B[300]:B[800], color:B[0], border:'none', fontSize:11, fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4, transition:'background .2s' }}><Ic n={fl?'check':'plus'} s={12} c={B[0]} />{fl?'Adicionado':'Adicionar'}</button>
-                  :<div style={{ display:'flex', overflow:'hidden', border:`1px solid ${B[800]}` }}>
-                    <button onClick={()=>setQty(p.id,q-1)} style={{ flex:1, padding:'8px 0', background:B[100], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><Ic n="minus" s={13} c={B[800]} /></button>
-                    <span style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:13, color:B[800], fontFamily:'monospace' }}>{q}</span>
-                    <button onClick={()=>add(p.id)} style={{ flex:1, padding:'8px 0', background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><Ic n="plus" s={13} c={B[0]} /></button>
-                  </div>
-                }
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      {count>0&&<button onClick={()=>setScreen('checkout')} style={{ position:'sticky', bottom:0, width:'100%', background:B[800], color:B[0], border:'none', padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ position:'relative' }}><Ic n="cart" s={22} c={B[0]} /><div style={{ position:'absolute', top:-5, right:-5, width:16, height:16, background:B[500], borderRadius:'50%', fontSize:9, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center' }}>{count}</div></div>
-          <div><div style={{ fontSize:10, color:B[300] }}>{count} item{count!==1?'s':''}</div><div style={{ fontSize:15, fontWeight:900, fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</div></div>
-        </div>
-        <div style={{ fontSize:12, fontWeight:800, display:'flex', alignItems:'center', gap:5 }}>Ver carrinho <Ic n="chevR" s={15} c={B[0]} /></div>
-      </button>}
-    </div>
-  )
-}
-
-// ─── Shared: ChatPanel ────────────────────────
-function ChatPanel({ contact, msgs, onSend, onBack }) {
-  const [input, setInput] = useState('')
-  const endRef = useRef(null)
-  useEffect(()=>{ endRef.current?.scrollIntoView({ behavior:'smooth' }) }, [msgs])
-  const send = () => { if (!input.trim()) return; onSend(input); setInput('') }
-  return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <div style={{ background:B[800], padding:'12px 16px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-        {onBack && <button onClick={onBack} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="back" s={22} c={B[0]} /></button>}
-        <Av lbl={contact?.av||'?'} sz={34} bg={B[600]} />
-        <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:B[0] }}>{contact?.name}</div><div style={{ fontSize:10, color:B[300] }}>{contact?.company}</div></div>
-        <button style={{ padding:'6px 12px', background:B[600], color:B[0], border:'none', fontSize:10, fontWeight:800, cursor:'pointer' }}>Orçamento</button>
-      </div>
-      <div style={{ flex:1, overflowY:'auto', padding:'14px 14px', background:B[50], display:'flex', flexDirection:'column', gap:8 }}>
-        {(msgs||[]).map((m,i)=>(
-          <div key={i} style={{ display:'flex', justifyContent:m.from==='m'?'flex-end':'flex-start' }}>
-            <div style={{ maxWidth:'72%', padding:'9px 12px', background:m.from==='m'?B[800]:B[0], border:m.from==='m'?'none':`1px solid ${B[200]}` }}>
-              <div style={{ fontSize:12, color:m.from==='m'?B[0]:B[800], whiteSpace:'pre-wrap', lineHeight:1.5 }}>{m.text}</div>
-              <div style={{ fontSize:10, color:m.from==='m'?B[300]:B[400], marginTop:4, textAlign:'right' }}>{m.time}</div>
-            </div>
-          </div>
-        ))}
-        <div ref={endRef} />
-      </div>
-      <div style={{ background:B[0], padding:'10px 14px', display:'flex', gap:8, borderTop:`1px solid ${B[150]}`, flexShrink:0 }}>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Digite uma mensagem..." style={{ flex:1, padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-        <button onClick={send} style={{ width:40, height:40, background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Ic n="send" s={16} c={B[0]} /></button>
-      </div>
-    </div>
-  )
-}
-
-
-// ─── FAB + Client Selector ────────────────────────────────────────────────────
-function FabOrder({ data }) {
-  const [open, setOpen]     = useState(false)
-  const [clientId, setClientId] = useState(null)
-  const [search, setSearch] = useState('')
-
-  const filtered = data.contacts.filter(c =>
-    c.stage !== 'prospect' &&
-    (c.name.toLowerCase().includes(search.toLowerCase()) ||
-     c.company.toLowerCase().includes(search.toLowerCase()))
-  )
-  const client = data.contacts.find(c => c.id === clientId)
-
-  return (
-    <>
-      {/* FAB */}
-      <button onClick={() => setOpen(true)} style={{
-        position:'fixed', bottom:78, right:16, zIndex:90,
-        width:54, height:54, borderRadius:'50%', background:B[800],
-        border:`3px solid ${B[0]}`, cursor:'pointer', display:'flex',
-        alignItems:'center', justifyContent:'center',
-        boxShadow:'0 4px 20px rgba(38,59,126,0.45)',
-      }}>
-        <Ic n="cart" s={22} c={B[0]} />
-      </button>
-
-      {/* Overlay */}
-      {open && (
-        <div onClick={() => { setOpen(false); setClientId(null); setSearch('') }}
-          style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.6)', zIndex:100, backdropFilter:'blur(2px)' }} />
-      )}
-
-      {/* Bottom sheet */}
-      {open && (
-        <div style={{
-          position:'fixed', bottom:0, left:0, right:0, zIndex:101,
-          background:B[0], borderRadius:'16px 16px 0 0',
-          maxHeight:'88dvh', display:'flex', flexDirection:'column',
-          boxShadow:'0 -8px 40px rgba(15,20,50,0.2)',
-        }}>
-          {/* Handle */}
-          <div style={{ display:'flex', justifyContent:'center', padding:'12px 0 8px' }}>
-            <div style={{ width:36, height:4, background:B[200], borderRadius:2 }} />
-          </div>
-
-          {!clientId ? (
-            <>
-              <div style={{ padding:'0 18px 14px' }}>
-                <div style={{ fontSize:16, fontWeight:800, color:B[800], marginBottom:14 }}>Tirar pedido para:</div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'10px 13px' }}>
-                  <Ic n="search" s={16} c={B[400]} />
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cliente..."
-                    style={{ border:'none', background:'none', outline:'none', fontSize:14, color:B[800], flex:1, fontFamily:'inherit' }} />
-                </div>
-              </div>
-              <div style={{ flex:1, overflowY:'auto', paddingBottom:20 }}>
-                {filtered.map(c => (
-                  <div key={c.id} onClick={e => { e.stopPropagation(); setClientId(c.id) }}
-                    style={{ display:'flex', gap:12, padding:'13px 18px', borderBottom:`1px solid ${B[100]}`, cursor:'pointer', alignItems:'center' }}>
-                    <Av lbl={c.av} sz={40} bg={B[800]} />
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:14, fontWeight:700, color:B[800] }}>{c.name}</div>
-                      <div style={{ fontSize:12, color:B[500] }}>{c.company} · {c.city}</div>
-                      {c.pipeline_value > 0 && <div style={{ fontSize:12, fontWeight:700, color:B[600], fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}
-                    </div>
-                    <Ic n="chevR" s={16} c={B[300]} />
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-              <div style={{ padding:'0 18px 10px', display:'flex', alignItems:'center', gap:10 }}>
-                <button onClick={e => { e.stopPropagation(); setClientId(null) }}
-                  style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}>
-                  <Ic n="back" s={20} c={B[800]} />
-                </button>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:800, color:B[800] }}>{client?.name}</div>
-                  <div style={{ fontSize:12, color:B[500] }}>{client?.company}</div>
-                </div>
-              </div>
-              <div style={{ flex:1, overflow:'hidden' }} onClick={e => e.stopPropagation()}>
-                <OrderPanel
-                  contact={client}
-                  products={data.products}
-                  promotions={data.promotions}
-                  combos={data.combos}
-                  paymentTerms={data.paymentTerms}
-                  deliveryOptions={data.deliveryOptions}
-                  onSend={async (...args) => { await data.createOrder(...args); setOpen(false); setClientId(null) }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </>
-  )
-}
-
-// ─── Page: PRODUTOS (ERP catalog) ─────────────────────────────────────────────
-function Produtos() {
-  const [search, setSearch]   = useState('')
-  const [cat, setCat]         = useState('Todos')
-  const [view, setView]       = useState('grid') // grid | list
-  const [syncFilter, setSyncFilter] = useState('all') // all | ok | error
-
-  const cats = ['Todos', ...new Set(ERP_PRODUCTS_DETAIL.map(p => p.category))]
-  const lastSyncGlobal = 'há 5 min'
-
-  const filtered = ERP_PRODUCTS_DETAIL.filter(p =>
-    (cat === 'Todos' || p.category === cat) &&
-    (syncFilter === 'all' || (syncFilter === 'ok' && p.syncOk) || (syncFilter === 'error' && !p.syncOk)) &&
-    (p.name.toLowerCase().includes(search.toLowerCase()) || p.ref.toLowerCase().includes(search.toLowerCase()) || p.erpCode.toLowerCase().includes(search.toLowerCase()))
-  )
-
-  const syncOkCount  = ERP_PRODUCTS_DETAIL.filter(p => p.syncOk).length
-  const syncErrCount = ERP_PRODUCTS_DETAIL.filter(p => !p.syncOk).length
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', minHeight:'100%' }}>
-      {/* Header strip */}
-      <div style={{ background:B[800], padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <div>
-          <div style={{ fontSize:10, color:B[300], textTransform:'uppercase', letterSpacing:.8 }}>Catálogo integrado ao</div>
-          <div style={{ fontSize:14, fontWeight:800, color:B[0] }}>ERP · {ERP_PRODUCTS_DETAIL.length} produtos</div>
-        </div>
-        <div style={{ textAlign:'right' }}>
-          <div style={{ fontSize:9, color:B[300] }}>Última sincronização</div>
-          <div style={{ fontSize:12, fontWeight:700, color:B[0] }}>{lastSyncGlobal}</div>
-        </div>
-      </div>
-
-      {/* Sync status bar */}
-      <div style={{ display:'flex', background:B[0], borderBottom:`1px solid ${B[150]}` }}>
-        {[
-          ['all',   `Todos (${ERP_PRODUCTS_DETAIL.length})`, B[800]],
-          ['ok',    `Sincronizados (${syncOkCount})`,        '#15803d'],
-          ['error', `Erro (${syncErrCount})`,                '#dc2626'],
-        ].map(([id, label, col]) => (
-          <button key={id} onClick={() => setSyncFilter(id)} style={{
-            flex:1, padding:'10px 6px', background:'none', border:'none', cursor:'pointer',
-            fontSize:10, fontWeight:700, color:syncFilter === id ? col : B[400],
-            borderBottom:`2px solid ${syncFilter === id ? col : 'transparent'}`,
-            marginBottom:-1,
-          }}>{label}</button>
-        ))}
-        <button style={{ padding:'8px 12px', background:'none', border:'none', cursor:'pointer', color:B[500], fontSize:11, fontWeight:700, display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
-          <Ic n="erp" s={13} c={B[500]} /> Sincronizar
-        </button>
-      </div>
-
-      {/* Search + filters */}
-      <div style={{ background:B[0], padding:'10px 14px', borderBottom:`1px solid ${B[150]}` }}>
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'9px 12px' }}>
-            <Ic n="search" s={15} c={B[400]} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nome, código ERP ou referência..."
-              style={{ border:'none', background:'none', outline:'none', fontSize:13, color:B[800], flex:1, fontFamily:'inherit' }} />
-            {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', display:'flex' }}><Ic n="x" s={14} c={B[400]} /></button>}
-          </div>
-          <div style={{ display:'flex', border:`1px solid ${B[200]}` }}>
-            {[['grid', 'grid'], ['list', 'sort']].map(([id, icon]) => (
-              <button key={id} onClick={() => setView(id)} style={{ padding:'9px 10px', background:view===id?B[800]:B[0], border:'none', cursor:'pointer', display:'flex' }}>
-                <Ic n={icon} s={15} c={view===id?B[0]:B[500]} />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Category tabs */}
-      <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, position:'sticky', top:0, zIndex:5 }}>
-        <div style={{ display:'flex', overflowX:'auto', scrollbarWidth:'none' }}>
-          {cats.map(c => (
-            <button key={c} onClick={() => setCat(c)} style={{
-              flexShrink:0, padding:'10px 13px', background:'none', border:'none', cursor:'pointer',
-              fontSize:11, fontWeight:700, whiteSpace:'nowrap',
-              color: cat===c ? B[800] : B[400],
-              borderBottom: cat===c ? `2px solid ${B[800]}` : '2px solid transparent', marginBottom:-1,
-            }}>{c}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* Products */}
-      {view === 'grid' ? (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, padding:10 }}>
-          {filtered.map(p => {
-            const low    = p.stock <= p.min
-            const outOfSync = !p.syncOk
-            return (
-              <div key={p.ref} style={{ background:B[0], border:`1px solid ${outOfSync?'#fca5a5':low?'#fed7aa':B[200]}`, borderTop:`3px solid ${outOfSync?'#dc2626':low?'#f97316':B[800]}`, padding:'11px 11px 10px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <span style={{ fontSize:9, color:B[400], fontFamily:'monospace', fontWeight:700 }}>{p.ref}</span>
-                  <span style={{ fontSize:8, fontWeight:800, padding:'1px 5px', background:p.syncOk?'#dcfce7':'#fee2e2', color:p.syncOk?'#15803d':'#dc2626' }}>
-                    {p.syncOk ? '✓ ERP' : '✗ SYNC'}
-                  </span>
-                </div>
-                <div style={{ fontSize:11, fontWeight:700, color:B[800], lineHeight:1.3, marginBottom:4 }}>{p.name}</div>
-                <div style={{ fontSize:9, color:B[500], marginBottom:6 }}>{p.erpCode}</div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
-                  <div>
-                    <div style={{ fontSize:15, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(p.price)}</div>
-                    <div style={{ fontSize:9, color:B[400] }}>/{p.unit}</div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:low?'#dc2626':B[700] }}>{p.stock}</div>
-                    <div style={{ fontSize:9, color:B[400] }}>em estoque</div>
-                  </div>
-                </div>
-                {low && <div style={{ marginTop:6, fontSize:9, fontWeight:800, color:'#b45309', background:'#fff7ed', padding:'2px 6px' }}>Estoque baixo — mín: {p.min}</div>}
-                {!p.syncOk && <div style={{ marginTop:6, fontSize:9, fontWeight:800, color:'#dc2626', background:'#fef2f2', padding:'2px 6px' }}>Erro de sincronização · {p.lastSync}</div>}
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div style={{ background:B[0] }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-            <thead>
-              <tr style={{ background:B[50] }}>
-                {['Ref','Nome','Cód. ERP','Preço','Estoque','Mín','Sincronização'].map(h => (
-                  <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.6, borderBottom:`1px solid ${B[150]}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p, i) => {
-                const low = p.stock <= p.min
-                return (
-                  <tr key={p.ref} style={{ borderBottom:`1px solid ${B[100]}`, background:i%2?B[50]:B[0] }}>
-                    <td style={{ padding:'10px 14px', fontFamily:'monospace', fontWeight:700, color:B[600] }}>{p.ref}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:600, color:B[800] }}>{p.name}</td>
-                    <td style={{ padding:'10px 14px', fontFamily:'monospace', color:B[500], fontSize:11 }}>{p.erpCode}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:800, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(p.price)}/{p.unit}</td>
-                    <td style={{ padding:'10px 14px', fontWeight:700, color:low?'#dc2626':B[700] }}>{p.stock}</td>
-                    <td style={{ padding:'10px 14px', color:B[500] }}>{p.min}</td>
-                    <td style={{ padding:'10px 14px' }}>
-                      <span style={{ fontSize:10, fontWeight:800, padding:'3px 8px', background:p.syncOk?'#dcfce7':'#fee2e2', color:p.syncOk?'#15803d':'#dc2626' }}>
-                        {p.syncOk ? `✓ ${p.lastSync}` : `✗ Erro · ${p.lastSync}`}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Page: MARKETING ──────────────────────────────────────────────────────────
-function Marketing() {
-  const [sub, setSub] = useState('agenda')
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', minHeight:'100%' }}>
-      {/* Sub-nav */}
-      <div style={{ background:B[0], display:'flex', borderBottom:`1px solid ${B[150]}`, flexShrink:0, overflowX:'auto', scrollbarWidth:'none' }}>
-        {[['agenda','Agenda'],['anuncios','Anúncios'],['campanhas','Campanhas'],['cadencia','Cadência']].map(([id,lbl]) => (
-          <button key={id} onClick={() => setSub(id)} style={{
-            flexShrink:0, padding:'12px 18px', background:'none', border:'none', cursor:'pointer',
-            fontSize:13, fontWeight:sub===id?800:500, color:sub===id?B[800]:B[400],
-            borderBottom:sub===id?`2px solid ${B[800]}`:'2px solid transparent', marginBottom:-1,
-          }}>{lbl}</button>
-        ))}
-      </div>
-
-      <div style={{ flex:1, overflowY:'auto' }}>
-
-        {/* ── AGENDA ── */}
-        {sub === 'agenda' && (
-          <div>
-            <div style={{ padding:'14px 16px', background:B[0], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div>
-                <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{AGENDA.length} visitas agendadas</div>
-                <div style={{ fontSize:11, color:B[500] }}>{AGENDA.filter(v=>v.origin==='erp').length} via ERP · {AGENDA.filter(v=>v.origin==='platform').length} via plataforma</div>
-              </div>
-              <button style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                <Ic n="plus" s={13} c={B[0]} /> Nova visita
-              </button>
-            </div>
-
-            {/* Legenda */}
-            <div style={{ padding:'8px 16px', background:B[50], borderBottom:`1px solid ${B[150]}`, display:'flex', gap:16 }}>
-              {[['ERP',B[800]],['Plataforma',B[400]]].map(([l,c]) => (
-                <div key={l} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:B[600] }}>
-                  <div style={{ width:8, height:8, background:c }} />{l}
-                </div>
-              ))}
-            </div>
-
-            {AGENDA.map((v, i) => (
-              <div key={v.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'13px 16px', borderLeft:`4px solid ${v.origin==='erp'?B[800]:B[400]}` }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-                  <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                    <Av lbl={v.av} sz={38} bg={v.origin==='erp'?B[800]:B[500]} />
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{v.contact_name}</div>
-                      <div style={{ fontSize:11, color:B[500] }}>{v.type==='presencial'?'Visita presencial':v.type==='videocall'?'Videochamada':'Ligação'}</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <span style={{ fontSize:9, fontWeight:800, padding:'2px 6px', textTransform:'uppercase', background:v.origin==='erp'?B[800]:B[150], color:v.origin==='erp'?B[0]:B[700] }}>{v.origin==='erp'?'ERP':'Site'}</span>
-                  </div>
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <div style={{ display:'flex', gap:5, alignItems:'center', fontSize:12, color:B[600] }}>
-                    <Ic n="cal" s={13} c={B[500]} />
-                    <strong>{v.date}</strong> às {v.time}
-                  </div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <span style={{ fontSize:9, fontWeight:800, padding:'2px 8px', background:v.status==='confirmed'?'#dcfce7':'#fef9c3', color:v.status==='confirmed'?'#15803d':'#854d0e', textTransform:'uppercase' }}>
-                      {v.status==='confirmed'?'Confirmado':'Pendente'}
-                    </span>
-                  </div>
-                </div>
-                {v.notes && <div style={{ marginTop:8, fontSize:11, color:B[600], background:B[50], padding:'6px 10px', borderLeft:`2px solid ${B[300]}` }}>{v.notes}</div>}
-                <div style={{ marginTop:10, display:'flex', gap:6 }}>
-                  <button onClick={()=>nav?.go('conversas')} style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Abrir chat</button>
-                  <button onClick={()=>nav?.order()} style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Tirar pedido</button>
-                  <button onClick={()=>alert('Reagendamento em breve')} style={{ padding:'7px 12px', background:B[50], color:B[500], border:`1px solid ${B[200]}`, fontSize:10, cursor:'pointer' }}>Reagendar</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── ANÚNCIOS ── */}
-        {sub === 'anuncios' && (
-          <div>
-            <div style={{ padding:'14px 16px', background:B[0], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>Anúncios WhatsApp</div>
-              <button style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                <Ic n="plus" s={13} c={B[0]} /> Novo anúncio
-              </button>
-            </div>
-            {ANUNCIOS.map(a => (
-              <div key={a.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{a.title}</div>
-                    <div style={{ fontSize:10, color:B[500], marginTop:2 }}>Criado em {a.created} · {a.type}</div>
-                  </div>
-                  <span style={{ fontSize:9, fontWeight:800, padding:'3px 8px', textTransform:'uppercase',
-                    background:a.status==='ativo'?'#dcfce7':a.status==='rascunho'?B[150]:'#f1f5f9',
-                    color:a.status==='ativo'?'#15803d':a.status==='rascunho'?B[600]:'#64748b'
-                  }}>{a.status}</span>
-                </div>
-                <div style={{ fontSize:12, color:B[600], background:B[50], padding:'8px 12px', lineHeight:1.5, marginBottom:10, borderLeft:`2px solid ${B[300]}` }}>
-                  {a.message}
-                </div>
-                {a.sent > 0 && (
-                  <div style={{ display:'flex', gap:16, marginBottom:10 }}>
-                    {[['Enviados',a.sent,'#263b7e'],['Abertos',a.opened,'#15803d'],['Convertidos',a.converted,'#7c3aed']].map(([l,v,c])=>(
-                      <div key={l} style={{ textAlign:'center' }}>
-                        <div style={{ fontSize:16, fontWeight:900, color:c }}>{v}</div>
-                        <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.5 }}>{l}</div>
-                      </div>
-                    ))}
-                    <div style={{ textAlign:'center' }}>
-                      <div style={{ fontSize:16, fontWeight:900, color:B[700] }}>{a.sent>0?Math.round(a.converted/a.sent*100):0}%</div>
-                      <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.5 }}>Conversão</div>
-                    </div>
-                  </div>
+              <button key={item.id} onClick={() => setAppView(item.id)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 8px", borderRadius: 7, border: "none", cursor: "pointer", background: active ? C.inkLight : "transparent", color: active ? C.green : "#94A3B8", marginBottom: 2, position: "relative" }}>
+                <item.icon size={17} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 700 : 400 }}>{item.label}</span>}
+                {item.badge && !collapsed && (
+                  <span style={{ marginLeft: "auto", background: C.green, color: C.ink, borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 800 }}>{item.badge}</span>
                 )}
-                <div style={{ display:'flex', gap:6 }}>
-                  {a.status==='rascunho' && <button onClick={()=>setAds(ads=>ads.map(x=>x.id===a.id?{...x,status:'ativo'}:x))} style={{ flex:1, padding:'8px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>Enviar agora</button>}
-                  <button onClick={()=>alert('Editor em breve')} style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Editar</button>
-                  {a.status==='ativo' && <button onClick={()=>setAds(ads=>ads.map(x=>x.id===a.id?{...x,status:'pausado'}:x))} style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Pausar</button>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── CAMPANHAS ── */}
-        {sub === 'campanhas' && (
-          <div>
-            <div style={{ padding:'14px 16px', background:B[0], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>Campanhas de mensagens</div>
-              <button style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                <Ic n="plus" s={13} c={B[0]} /> Nova campanha
-              </button>
-            </div>
-            {CAMPANHAS.map(c => (
-              <div key={c.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{c.name}</div>
-                    <div style={{ fontSize:10, color:B[500], marginTop:2 }}>Início: {c.start} · WhatsApp</div>
-                  </div>
-                  <span style={{ fontSize:9, fontWeight:800, padding:'3px 8px', textTransform:'uppercase',
-                    background:c.status==='ativa'?'#dcfce7':c.status==='rascunho'?B[150]:'#f1f5f9',
-                    color:c.status==='ativa'?'#15803d':c.status==='rascunho'?B[600]:'#64748b'
-                  }}>{c.status}</span>
-                </div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginBottom:10 }}>
-                  {[['Contatos',c.contacts,B[800]],['Enviados',c.sent,B[600]],['Responderam',c.replied,'#15803d'],['Convertidos',c.converted,'#7c3aed']].map(([l,v,col])=>(
-                    <div key={l} style={{ background:B[50], border:`1px solid ${B[150]}`, padding:'8px', textAlign:'center' }}>
-                      <div style={{ fontSize:18, fontWeight:900, color:col }}>{v}</div>
-                      <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.4 }}>{l}</div>
-                    </div>
-                  ))}
-                </div>
-                {c.sent > 0 && (
-                  <div style={{ background:B[100], height:6, marginBottom:10 }}>
-                    <div style={{ height:6, background:B[800], width:`${Math.round(c.sent/c.contacts*100)}%` }} />
-                  </div>
+                {item.badge && collapsed && (
+                  <span style={{ position: "absolute", top: 5, right: 5, width: 7, height: 7, background: C.green, borderRadius: "50%" }} />
                 )}
-                <div style={{ display:'flex', gap:6 }}>
-                  {c.status==='rascunho' && <button onClick={()=>setCampanhas(cs=>cs.map(x=>x.id===c.id?{...x,status:'ativo'}:x))} style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Iniciar campanha</button>}
-                  <button onClick={()=>alert('Detalhes em breve')} style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Ver detalhes</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── CADÊNCIA ── */}
-        {sub === 'cadencia' && (
-          <div>
-            <div style={{ padding:'14px 16px', background:B[0], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>Sequências de cadência</div>
-              <button style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                <Ic n="plus" s={13} c={B[0]} /> Nova sequência
               </button>
-            </div>
-            {CADENCIAS.map(cd => (
-              <div key={cd.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{cd.name}</div>
-                    <div style={{ fontSize:11, color:B[500], marginTop:2 }}>{cd.contacts} contatos ativos</div>
-                  </div>
-                  <span style={{ fontSize:9, fontWeight:800, padding:'3px 8px', background:'#dcfce7', color:'#15803d', textTransform:'uppercase' }}>{cd.status}</span>
-                </div>
-                <div style={{ position:'relative', paddingLeft:20 }}>
-                  {/* Timeline line */}
-                  <div style={{ position:'absolute', left:7, top:8, bottom:8, width:2, background:B[150] }} />
-                  {cd.steps.map((step, i) => (
-                    <div key={i} style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:10, position:'relative' }}>
-                      <div style={{ width:14, height:14, borderRadius:'50%', background:step.done?B[800]:B[200], border:`2px solid ${step.done?B[800]:B[300]}`, flexShrink:0, marginTop:2, zIndex:1 }} />
-                      <div style={{ flex:1, background:step.done?B[50]:B[0], border:`1px solid ${step.done?B[200]:B[150]}`, padding:'8px 12px' }}>
-                        <div style={{ display:'flex', justifyContent:'space-between' }}>
-                          <span style={{ fontSize:12, fontWeight:600, color:step.done?B[600]:B[800] }}>{step.label}</span>
-                          <span style={{ fontSize:9, fontWeight:700, color:B[500] }}>Dia {step.day}</span>
-                        </div>
-                        <div style={{ fontSize:10, color:B[400], marginTop:2, textTransform:'uppercase', letterSpacing:.4 }}>
-                          {step.type==='whatsapp'?'WhatsApp':step.type==='visita'?'Visita':'Ligação'} {step.done?'· Enviado':''}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button style={{ width:'100%', marginTop:4, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                  Gerenciar sequência
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-      </div>
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// MOBILE APP
-// ═══════════════════════════════════════════════
-function MobileApp({ data, user, onLogout }) {
-  const [tab, setTab]         = useState('home')
-  const [sideOpen, setSideOpen] = useState(false)
-  const [orderOpen, setOrderOpen]         = useState(false)
-  const [orderCid, setOrderCid]           = useState(null)
-  const [addContactOpen, setAddContactOpen] = useState(false)
-  const nav = {
-    go:     (t)        => { setTab(t); setSideOpen(false) },
-    order:  (cid=null) => { setOrderCid(cid); setOrderOpen(true) },
-    addContact: ()     => setAddContactOpen(true),
-  }
-
-  const LABELS = { home:'Início', pedidos:'Tirar Pedido', conversas:'Conversas', contatos:'Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo ERP', mais:'Mais' }
-  const SIDE_NAV = [
-    { section:'Principal' },
-    { id:'home',       label:'Início',             icon:'home'   },
-    { id:'pedidos',    label:'Tirar Pedido',        icon:'cart'   },
-    { id:'conversas',  label:'Conversas',           icon:'chat'   },
-    { section:'Clientes' },
-    { id:'contatos',   label:'Carteira de Contatos',icon:'user'   },
-    { id:'funil',      label:'Funil de Vendas',     icon:'funnel' },
-    { section:'Marketing' },
-    { id:'marketing',  label:'Marketing & Agenda',  icon:'zap'    },
-    { id:'produtos',   label:'Catálogo ERP',        icon:'erp'    },
-    { section:'Performance' },
-    { id:'mais',       label:'Metas & Gestão',      icon:'bar'    },
-  ]
-
-  return (
-    <div style={{ fontFamily:"'Inter',system-ui,sans-serif", background:B[50], height:'100dvh', display:'flex', flexDirection:'column', overflow:'hidden', maxWidth:430, margin:'0 auto', position:'relative' }}>
-      {/* Sidebar */}
-      {sideOpen && <div onClick={()=>setSideOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.55)', zIndex:200, backdropFilter:'blur(2px)' }} />}
-      <div style={{ position:'fixed', top:0, left:0, bottom:0, width:272, background:B[0], zIndex:201, transform:sideOpen?'translateX(0)':'translateX(-100%)', transition:'transform .25s cubic-bezier(.4,0,.2,1)', display:'flex', flexDirection:'column', boxShadow:sideOpen?'4px 0 32px rgba(15,20,50,0.18)':'none' }}>
-        <div style={{ background:B[800], padding:'16px 20px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <img src="/logo.svg" alt="" style={{ height:30, filter:'brightness(0) invert(1)' }} onError={e=>{e.target.style.display='none'}} />
-          <button onClick={()=>setSideOpen(false)} style={{ background:'rgba(255,255,255,0.15)', border:'none', cursor:'pointer', display:'flex', padding:8 }}><Ic n="x" s={16} c={B[0]} /></button>
-        </div>
-        <div style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
-          {SIDE_NAV.map((item,i)=>item.section
-            ? <div key={i} style={{ padding:'14px 20px 6px', fontSize:9, fontWeight:800, color:B[400], textTransform:'uppercase', letterSpacing:1.2 }}>{item.section}</div>
-            : <button key={item.id} onClick={()=>{ setTab(item.id); setSideOpen(false) }} style={{ width:'100%', display:'flex', alignItems:'center', gap:14, padding:'13px 20px', background:tab===item.id?B[100]:'none', borderLeft:`3px solid ${tab===item.id?B[800]:'transparent'}`, border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit' }}>
-                <Ic n={item.icon} s={20} c={tab===item.id?B[800]:B[400]} />
-                <span style={{ fontSize:14, fontWeight:tab===item.id?700:500, color:tab===item.id?B[800]:B[600] }}>{item.label}</span>
-              </button>
-          )}
-        </div>
-        <div style={{ borderTop:`1px solid ${B[150]}`, padding:'14px 20px', display:'flex', alignItems:'center', gap:12, background:B[50] }}>
-          <Av lbl={(user?.full_name||'CS').split(' ').map(w=>w[0]).join('').slice(0,2)} sz={40} bg={B[800]} />
-          <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{user?.full_name||'Demo'}</div><div style={{ fontSize:11, color:B[500] }}>{user?.role||'Representante'}</div></div>
-          <button onClick={onLogout} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="logout" s={18} c={B[400]} /></button>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px 0' }}>
-          <button onClick={()=>setSideOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:6, marginLeft:-6 }}><Ic n="menu" s={22} c={B[800]} /></button>
-          <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
-            <img src="/logo.svg" alt="CRepresentante" style={{ height:32, objectFit:'contain' }} onError={e=>{e.target.style.display='none'}} />
-          </div>
-          <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-            <button style={{ background:'none', border:'none', cursor:'pointer', position:'relative', display:'flex', padding:4 }}>
-              <Ic n="bell" s={21} c={B[600]} />
-              <div style={{ position:'absolute', top:3, right:3, width:7, height:7, background:'#ef4444', borderRadius:'50%', border:`1.5px solid ${B[0]}` }} />
-            </button>
-            <Av lbl={(user?.full_name||'CS').split(' ').map(w=>w[0]).join('').slice(0,2)} sz={30} bg={B[800]} />
-          </div>
-        </div>
-        <div style={{ padding:'6px 16px 10px' }}>
-          <span style={{ fontSize:12, fontWeight:800, color:B[700], textTransform:'uppercase', letterSpacing:.8 }}>{LABELS[tab]||tab}</span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ flex:1, overflowY:'auto', WebkitOverflowScrolling:'touch' }}>
-        {tab==='home'       && <MobileHome data={data} />}
-        {tab==='pedidos'    && <MobilePedidos data={data} />}
-        {tab==='conversas'  && <MobileConversas data={data} />}
-        {tab==='contatos'   && <MobileContatos data={data} nav={nav} />}
-        {tab==='funil'      && <MobileFunil data={data} nav={nav} />}
-        {tab==='marketing'  && <Marketing data={data} isMobile nav={nav} />}
-        {tab==='produtos'   && <div style={{ padding:16 }}><div style={{ fontSize:12, color:B[500] }}>Abra no desktop para visualização completa dos produtos ERP.</div></div>}
-        {tab==='mais'       && <MobileMais data={data} />}
-      </div>
-      {/* Bottom nav */}
-      <div style={{ background:B[0], borderTop:`1px solid ${B[150]}`, display:'flex', flexShrink:0 }}>
-        {[['home','Início','home'],['pedidos','Pedidos','cart'],['conversas','Chat','chat'],['marketing','Marketing','zap'],['mais','Mais','bar']].map(([id,lbl,icon])=>(
-          <button key={id} onClick={()=>setTab(id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'10px 0 12px', background:'none', border:'none', cursor:'pointer', position:'relative' }}>
-            {tab===id && <div style={{ position:'absolute', top:0, left:'22%', right:'22%', height:2, background:B[800] }} />}
-            <Ic n={icon} s={tab===id?21:19} c={tab===id?B[800]:B[300]} />
-            <span style={{ fontSize:9, fontWeight:tab===id?800:500, color:tab===id?B[800]:B[400], letterSpacing:.2 }}>{lbl}</span>
-          </button>
-        ))}
-      </div>
-      <FAB data={data} visible={!['pedidos','conversas'].includes(tab)} />
-      <OrderModal data={data} open={orderOpen} onClose={()=>{setOrderOpen(false);setOrderCid(null)}} initialClientId={orderCid} />
-      {addContactOpen && <AddContactModal data={data} onClose={()=>setAddContactOpen(false)} />}
-    </div>
-  )
-}
-
-function MobileHome({ data }) {
-  const s = data.stats
-  return (
-    <div style={{ paddingBottom:24 }}>
-      <div style={{ background:B[800], padding:'20px 20px 24px' }}>
-        <div style={{ fontSize:12, color:B[300], marginBottom:14 }}>Resultados de Junho 2025</div>
-        <div style={{ display:'flex', gap:0, marginBottom:14 }}>
-          <div style={{ flex:1 }}><div style={{ fontSize:11, color:B[400] }}>Realizado</div><div style={{ fontSize:28, fontWeight:900, color:B[0], letterSpacing:-1, fontVariantNumeric:'tabular-nums' }}>{fmt(s.salesMonth)}</div></div>
-          <div style={{ flex:1 }}><div style={{ fontSize:11, color:B[400] }}>Meta</div><div style={{ fontSize:28, fontWeight:900, color:B[300], letterSpacing:-1 }}>{fmt(s.target)}</div></div>
-          <div style={{ flex:1, textAlign:'right' }}><div style={{ fontSize:11, color:B[400] }}>Atingimento</div><div style={{ fontSize:28, fontWeight:900, color:'#ffd166', letterSpacing:-1 }}>{s.attainment}%</div></div>
-        </div>
-        <div style={{ background:'rgba(255,255,255,0.2)', height:6 }}><div style={{ width:`${s.attainment}%`, height:6, background:B[300] }} /></div>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:B[200] }}>
-        <KpiCard label="Orçamentos abertos" value={s.openQuotes}      sub={fmt(s.openQuotesValue)} icon="file"   accent />
-        <KpiCard label="Pipeline total"     value={fmt(s.pipeline)}   sub="em negociação"         icon="dollar" accent />
-        <KpiCard label="Visitas marcadas"   value={s.visitsUpcoming}  sub="próximas"              icon="cal"    accent />
-        <KpiCard label="Conversão"          value={`${s.conversionRate}%`} sub="+6pp vs. maio"   icon="trend"  accent />
-      </div>
-      <div style={{ background:B[0], margin:'1px 0', padding:'14px 16px 8px' }}>
-        <div style={{ fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.6, marginBottom:12 }}>Vendas vs Meta</div>
-        <ResponsiveContainer width="100%" height={140}>
-          <BarChart data={data.monthData} barSize={12} barGap={3}>
-            <CartesianGrid strokeDasharray="2 4" stroke={B[150]} />
-            <XAxis dataKey="m" tick={{ fontSize:10, fill:B[400] }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize:9, fill:B[400] }} axisLine={false} tickLine={false} tickFormatter={v=>`${v/1000}k`} />
-            <Tooltip formatter={v=>fmt(v)} contentStyle={{ border:`1px solid ${B[200]}`, borderRadius:0, fontSize:11 }} />
-            <Bar dataKey="t" fill={B[150]} name="Meta" /><Bar dataKey="v" fill={B[800]} name="Vendas" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div style={{ background:B[0], margin:'1px 0' }}>
-        <div style={{ padding:'12px 16px 0', fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.6 }}>Próximas visitas</div>
-        {data.visits.map(v=>(
-          <div key={v.id} style={{ padding:'11px 16px', borderBottom:`1px solid ${B[100]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div><div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{v.contact_name}</div><div style={{ fontSize:11, color:B[500], marginTop:1 }}>{v.scheduled_at} · {v.type}</div></div>
-            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-              <span style={{ fontSize:9, fontWeight:800, padding:'2px 6px', textTransform:'uppercase', background:v.origin==='erp'?B[800]:B[150], color:v.origin==='erp'?B[0]:B[700] }}>{v.origin==='erp'?'ERP':'Site'}</span>
-              <Tag label={v.status==='confirmed'?'Confirmado':'Pendente'} variant={v.status==='confirmed'?'success':'warn'} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function MobilePedidos({ data }) {
-  const [clientId, setClientId] = useState(data.contacts.filter(c=>c.stage!=='prospect')[0]?.id)
-  const client = data.contacts.find(c=>c.id===clientId)
-  return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}` }}>
-        <div style={{ display:'flex', overflowX:'auto', scrollbarWidth:'none', padding:'8px 12px 0', gap:4 }}>
-          {data.contacts.filter(c=>c.stage!=='prospect').map(c=>(
-            <button key={c.id} onClick={()=>setClientId(c.id)} style={{ flexShrink:0, display:'flex', alignItems:'center', gap:6, padding:'6px 10px 10px', background:'none', border:'none', cursor:'pointer', borderBottom:clientId===c.id?`2px solid ${B[800]}`:'2px solid transparent', marginBottom:-1 }}>
-              <Av lbl={c.av} sz={22} bg={clientId===c.id?B[800]:B[300]} />
-              <span style={{ fontSize:11, fontWeight:clientId===c.id?800:500, color:clientId===c.id?B[800]:B[500], whiteSpace:'nowrap' }}>{c.company.split(' ')[0]}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div style={{ flex:1, overflow:'hidden' }}>
-        <OrderPanel contact={client} products={data.products} promotions={data.promotions} combos={data.combos} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={data.createOrder} />
-      </div>
-    </div>
-  )
-}
-
-
-// ─── ChatInput — controlled send box ───────────────────────────
-function ChatInput({ onSend }) {
-  const [msg, setMsg] = useState('')
-  const send = () => { if(!msg.trim()) return; onSend(msg.trim()); setMsg('') }
-  return (
-    <div style={{ display:'flex', gap:8 }}>
-      <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Digite uma mensagem..." style={{ flex:1, padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-      <button onClick={send} style={{ width:40, height:40, background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Ic n="send" s={16} c={B[0]} /></button>
-    </div>
-  )
-}
-
-function MobileConversas({ data }) {
-  const [activeId, setActiveId] = useState(null)
-  const [msgs, setMsgs]         = useState({ ...MOCK.messages })
-  const [showOrder, setShowOrder] = useState(false)
-  const ac = data.contacts.find(c=>c.id===activeId)
-  const sendMsg = text => { const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); setMsgs(m=>({...m,[activeId]:[...(m[activeId]||[]),{from:'m',text,time:now}]})); data.addMessage(activeId,{from:'m',text,time:now}) }
-  if (activeId && showOrder) return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
-        <button onClick={()=>setShowOrder(false)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="back" s={20} c={B[800]} /></button>
-        <div><div style={{ fontSize:13, fontWeight:800, color:B[800] }}>Compra Assistida</div><div style={{ fontSize:11, color:B[500] }}>{ac?.name}</div></div>
-      </div>
-      <div style={{ flex:1, overflow:'hidden' }}>
-        <OrderPanel contact={ac} products={data.products} promotions={data.promotions} combos={data.combos} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={async (...args)=>{ await data.createOrder(...args); setShowOrder(false) }} />
-      </div>
-    </div>
-  )
-  if (activeId) return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <div style={{ background:B[800], padding:'12px 16px', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-        <button onClick={()=>setActiveId(null)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="back" s={22} c={B[0]} /></button>
-        <Av lbl={ac?.av||'?'} sz={34} bg={B[600]} />
-        <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:B[0] }}>{ac?.name}</div><div style={{ fontSize:10, color:B[300] }}>{ac?.company}</div></div>
-        <button onClick={()=>setShowOrder(true)} style={{ padding:'6px 12px', background:'rgba(255,255,255,0.15)', color:B[0], border:'none', fontSize:10, fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
-          <Ic n="cart" s={13} c={B[0]} /> Pedido
-        </button>
-      </div>
-      <div style={{ flex:1, overflowY:'auto', padding:'14px 14px', background:B[50], display:'flex', flexDirection:'column', gap:8 }}>
-        {(msgs[activeId]||[]).map((m,i)=>(<div key={i} style={{ display:'flex', justifyContent:m.from==='m'?'flex-end':'flex-start' }}><div style={{ maxWidth:'72%', padding:'9px 12px', background:m.from==='m'?B[800]:B[0], border:m.from==='m'?'none':`1px solid ${B[200]}` }}><div style={{ fontSize:12, color:m.from==='m'?B[0]:B[800], whiteSpace:'pre-wrap', lineHeight:1.5 }}>{m.text}</div><div style={{ fontSize:10, color:m.from==='m'?B[300]:B[400], marginTop:4, textAlign:'right' }}>{m.time}</div></div></div>))}
-      </div>
-      <div style={{ background:B[0], padding:'10px 14px', display:'flex', gap:8, borderTop:`1px solid ${B[150]}`, flexShrink:0 }}>
-        <ChatInput onSend={sendMsg} />
-      </div>
-    </div>
-  )
-  return (
-    <div>
-      {data.contacts.map(c=>{
-        const last=(msgs[c.id]||[]).at(-1)
-        return (
-          <div key={c.id} onClick={()=>setActiveId(c.id)} style={{ display:'flex', gap:12, padding:'14px 16px', background:B[0], borderBottom:`1px solid ${B[100]}`, cursor:'pointer', alignItems:'center' }}>
-            <div style={{ position:'relative' }}><Av lbl={c.av} sz={44} bg={B[800]} />{c.unread>0&&<div style={{ position:'absolute', top:-3, right:-3, width:17, height:17, background:B[500], borderRadius:'50%', fontSize:9, fontWeight:900, color:B[0], display:'flex', alignItems:'center', justifyContent:'center' }}>{c.unread}</div>}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}><span style={{ fontSize:14, fontWeight:700, color:B[800] }}>{c.name}</span><span style={{ fontSize:11, color:B[400] }}>{c.last_contact_at}</span></div>
-              <div style={{ fontSize:12, color:B[500] }}>{c.company}</div>
-              <div style={{ fontSize:11, color:B[400], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:2 }}>{last?.text?.split('\n')[0]||'Sem mensagens'}</div>
-            </div>
-            <Ic n="chevR" s={16} c={B[300]} />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function MobileContatos({ data }) {
-  const [search, setSearch]   = useState('')
-  const [selected, setSelected] = useState(null)
-  const [showF, setShowF]     = useState(false)
-  const [activeTag, setActiveTag] = useState('Todos')
-  const allTags = ['Todos',...new Set(data.contacts.flatMap(c=>c.tags))]
-  const list = data.contacts.filter(c=>(activeTag==='Todos'||c.tags.includes(activeTag))&&(c.name.toLowerCase().includes(search.toLowerCase())||c.company.toLowerCase().includes(search.toLowerCase())))
-  if (selected) {
-    const c=data.contacts.find(x=>x.id===selected)
-    return (
-      <div>
-        <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, padding:'12px 16px', display:'flex', alignItems:'center', gap:12 }}>
-          <button onClick={()=>setSelected(null)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="back" s={22} c={B[800]} /></button>
-          <span style={{ fontSize:13, fontWeight:700, color:B[800] }}>Contato</span>
-        </div>
-        <div style={{ background:B[800], padding:'24px 20px 20px', display:'flex', gap:16, alignItems:'center' }}>
-          <Av lbl={c.av} sz={56} bg={B[600]} />
-          <div><div style={{ fontSize:18, fontWeight:800, color:B[0] }}>{c.name}</div><div style={{ fontSize:13, color:B[300], marginTop:2 }}>{c.job_title}</div><div style={{ fontSize:12, color:B[400] }}>{c.company}</div><div style={{ display:'flex', gap:5, marginTop:8, flexWrap:'wrap' }}>{c.tags.map(t=><Tag key={t} label={t} variant={tagVariant(t)} />)}</div></div>
-        </div>
-        <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${B[150]}` }}>
-          {[['phone','Ligar',()=>window.open('tel:'+c.phone)],['chat','WhatsApp',()=>nav?.go('conversas')],['cal','Visita',()=>{}],['file','Orçar',()=>nav?.order(c.id)]].map(([icon,lbl,fn])=>(
-            <button key={lbl} onClick={fn} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'14px 8px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer' }}>
-              <Ic n={icon} s={20} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.4 }}>{lbl}</span>
-            </button>
-          ))}
-        </div>
-        {[['phone','Telefone',c.phone],['mail','E-mail',c.email],['map','Cidade',`${c.city} · ${c.state}`],['funnel','Estágio',STAGE_LABEL[c.stage]||c.stage]].map(([icon,label,val])=>(
-          <div key={label} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 16px', borderBottom:`1px solid ${B[100]}`, background:B[0] }}>
-            <Ic n={icon} s={18} c={B[400]} />
-            <div><div style={{ fontSize:10, color:B[400], marginBottom:2 }}>{label}</div><div style={{ fontSize:13, fontWeight:600, color:B[800] }}>{val||'—'}</div></div>
-          </div>
-        ))}
-        {c.pipeline_value>0 && <div style={{ background:B[0], padding:'14px 16px', margin:'1px 0' }}><div style={{ fontSize:10, fontWeight:800, color:B[700], textTransform:'uppercase', letterSpacing:.8, marginBottom:8 }}>Pipeline</div><div style={{ fontSize:24, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div></div>}
-        {c.notes && <div style={{ background:B[0], margin:'1px 0', padding:'14px 16px' }}><div style={{ fontSize:10, fontWeight:800, color:B[700], textTransform:'uppercase', letterSpacing:.8, marginBottom:8 }}>Notas</div><div style={{ fontSize:13, color:B[700], lineHeight:1.6, background:B[50], padding:'12px 14px', borderLeft:`3px solid ${B[800]}` }}>{c.notes}</div></div>}
-      </div>
-    )
-  }
-  return (
-    <div>
-      <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, padding:'10px 14px' }}>
-        <div style={{ display:'flex', gap:8 }}>
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'9px 12px' }}>
-            <Ic n="search" s={15} c={B[400]} /><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nome, empresa ou telefone..." style={{ border:'none', background:'none', outline:'none', fontSize:13, color:B[800], flex:1, fontFamily:'inherit' }} />
-            {search&&<button onClick={()=>setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', display:'flex' }}><Ic n="x" s={14} c={B[400]} /></button>}
-          </div>
-          <button onClick={()=>setShowF(f=>!f)} style={{ padding:'9px 12px', background:showF?B[800]:B[50], border:`1px solid ${showF?B[800]:B[200]}`, cursor:'pointer', display:'flex' }}><Ic n="filter" s={16} c={showF?B[0]:B[600]} /></button>
-        </div>
-        {showF && <div style={{ marginTop:10, display:'flex', gap:5, overflowX:'auto', scrollbarWidth:'none' }}>
-          {allTags.map(t=>(<button key={t} onClick={()=>setActiveTag(t)} style={{ flexShrink:0, padding:'5px 10px', fontSize:10, fontWeight:700, cursor:'pointer', background:activeTag===t?B[800]:B[0], color:activeTag===t?B[0]:B[600], border:`1px solid ${activeTag===t?B[800]:B[200]}` }}>{t}</button>))}
-        </div>}
-      </div>
-      <div style={{ padding:'7px 16px', background:B[50], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between' }}>
-        <span style={{ fontSize:11, color:B[500] }}>{list.length} contato{list.length!==1?'s':''}</span>
-        <button onClick={()=>nav?.addContact()} style={{ fontSize:11, fontWeight:700, color:B[800], background:'none', border:`1px solid ${B[300]}`, padding:'4px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}><Ic n="plus" s={12} c={B[800]} /> Novo</button>
-      </div>
-      {list.map(c=>(
-        <div key={c.id} onClick={()=>setSelected(c.id)} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'13px 16px', display:'flex', gap:12, alignItems:'center', cursor:'pointer' }}>
-          <div style={{ position:'relative' }}><Av lbl={c.av} sz={44} bg={B[800]} />{c.unread>0&&<div style={{ position:'absolute', top:-3, right:-3, width:16, height:16, background:B[500], borderRadius:'50%', fontSize:9, fontWeight:900, color:B[0], display:'flex', alignItems:'center', justifyContent:'center' }}>{c.unread}</div>}</div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}><span style={{ fontSize:14, fontWeight:700, color:B[800] }}>{c.name}</span><span style={{ fontSize:10, color:B[400] }}>{c.last_contact_at}</span></div>
-            <div style={{ fontSize:12, color:B[500], marginBottom:4 }}>{c.company} · {c.city}</div>
-            <div style={{ display:'flex', gap:4, flexWrap:'wrap', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ display:'flex', gap:4 }}>{c.tags.slice(0,2).map(t=><Tag key={t} label={t} variant={tagVariant(t)} />)}</div>
-              {c.pipeline_value>0&&<span style={{ fontSize:12, fontWeight:800, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</span>}
-            </div>
-          </div>
-          <Ic n="chevR" s={15} c={B[300]} />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function MobileFunil({ data }) {
-  return (
-    <div>
-      <div style={{ background:B[0], padding:'14px 16px', borderBottom:`1px solid ${B[150]}`, display:'flex', gap:0 }}>
-        {[['Total',data.contacts.length],['Pipeline',fmt(data.contacts.reduce((a,c)=>a+c.pipeline_value,0))],['Conversão','34%']].map(([l,v])=>(
-          <div key={l} style={{ flex:1, textAlign:'center' }}><div style={{ fontSize:18, fontWeight:900, color:B[800] }}>{v}</div><div style={{ fontSize:10, color:B[500], textTransform:'uppercase', letterSpacing:.5 }}>{l}</div></div>
-        ))}
-      </div>
-      {STAGES.map(stage=>{
-        const cs=data.contacts.filter(c=>c.stage===stage); if(!cs.length) return null
-        return (
-          <div key={stage} style={{ marginBottom:1 }}>
-            <div style={{ padding:'10px 16px', background:B[800], display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:10, fontWeight:800, color:B[0], textTransform:'uppercase', letterSpacing:.8 }}>{STAGE_LABEL[stage]}</span>
-              <div style={{ display:'flex', gap:10 }}><span style={{ fontSize:11, fontWeight:700, color:B[300], fontVariantNumeric:'tabular-nums' }}>{fmt(cs.reduce((a,c)=>a+c.pipeline_value,0))}</span><span style={{ fontSize:10, fontWeight:800, background:'rgba(255,255,255,0.15)', color:B[0], padding:'2px 7px' }}>{cs.length}</span></div>
-            </div>
-            {cs.map(c=>(
-              <div key={c.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'12px 16px', display:'flex', gap:12, alignItems:'center' }}>
-                <Av lbl={c.av} sz={38} bg={B[700]} />
-                <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:11, color:B[500] }}>{c.company}</div>{c.pipeline_value>0&&<div style={{ fontSize:14, fontWeight:900, color:B[800], marginTop:4, fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}</div>
-                <div style={{ display:'flex', gap:5 }}>
-                  <button style={{ padding:'7px', background:B[800], border:'none', cursor:'pointer', display:'flex' }}><Ic n="chat" s={15} c={B[0]} /></button>
-                  <button style={{ padding:'7px', background:B[50], border:`1px solid ${B[200]}`, cursor:'pointer', display:'flex' }}><Ic n="file" s={15} c={B[600]} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function MobileMais({ data }) {
-  const [sub, setSub] = useState('metas')
-  const s = data.stats
-  return (
-    <div>
-      <div style={{ background:B[0], display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-        {[['metas','Metas'],['gestao','Gestão'],['pedidos','Pedidos']].map(([id,lbl])=>(<button key={id} onClick={()=>setSub(id)} style={{ flex:1, padding:'13px', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:sub===id?800:500, color:sub===id?B[800]:B[400], borderBottom:sub===id?`2px solid ${B[800]}`:'2px solid transparent', marginBottom:-1 }}>{lbl}</button>))}
-      </div>
-      {sub==='metas'&&(<div>
-        <div style={{ background:B[0], padding:'18px 16px', borderBottom:`1px solid ${B[150]}` }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}><div style={{ fontSize:24, fontWeight:900, color:B[800] }}>R$55k <span style={{ fontSize:14, color:B[400], fontWeight:500 }}>/ R$60k</span></div><div style={{ fontSize:22, fontWeight:900, color:B[800] }}>91%</div></div>
-          <div style={{ background:B[150], height:10 }}><div style={{ width:'91%', height:10, background:B[800] }} /></div>
-          <div style={{ fontSize:12, color:B[500], marginTop:6 }}>Faltam R$5.000 para bater a meta</div>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:B[200] }}>
-          {[['Visitas','21','25'],['Propostas','14','20'],['Fechamentos','18','22'],['NPS','82','—']].map(([l,v,m])=>(<div key={l} style={{ background:B[0], padding:'14px 16px' }}><div style={{ fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>{l}</div><div style={{ fontSize:22, fontWeight:900, color:B[800] }}>{v}<span style={{ fontSize:11, color:B[400], fontWeight:500 }}>/{m}</span></div>{m!=='—'&&<div style={{ background:B[150], height:4, marginTop:6 }}><div style={{ width:`${pct(+v,+m)}%`, height:4, background:B[800] }} /></div>}</div>))}
-        </div>
-        <div style={{ background:B[0], padding:'14px 16px 8px', margin:'1px 0' }}>
-          <div style={{ fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.6, marginBottom:10 }}>Vendas esta semana</div>
-          <ResponsiveContainer width="100%" height={130}><AreaChart data={data.weekData}><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={B[800]} stopOpacity={0.15}/><stop offset="95%" stopColor={B[800]} stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="2 4" stroke={B[150]} /><XAxis dataKey="d" tick={{ fontSize:10, fill:B[400] }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize:9, fill:B[400] }} axisLine={false} tickLine={false} tickFormatter={v=>`${v/1000}k`} /><Tooltip formatter={v=>fmt(v)} contentStyle={{ border:`1px solid ${B[200]}`, borderRadius:0, fontSize:11 }} /><Area type="monotone" dataKey="v" stroke={B[800]} strokeWidth={2} fill="url(#ag)" name="Vendas" dot={{ fill:B[800], r:3, strokeWidth:0 }} /></AreaChart></ResponsiveContainer>
-        </div>
-      </div>)}
-      {sub==='gestao'&&(<div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:B[200] }}>
-          {[['Pipeline',fmt(s.pipeline),'6 oport.'],['Ticket médio',`R$${(s.avgTicket/1000).toFixed(0)}k`,'+12% vs maio'],['Conversão',`${s.conversionRate}%`,'+6pp vs maio'],['Clientes ativos',s.contactsTotal,'3 prospects']].map(([l,v,su])=>(<div key={l} style={{ background:B[0], padding:'16px', borderTop:`3px solid ${B[800]}` }}><div style={{ fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>{l}</div><div style={{ fontSize:20, fontWeight:900, color:B[800] }}>{v}</div><div style={{ fontSize:11, color:B[400], marginTop:4 }}>{su}</div></div>))}
-        </div>
-        <div style={{ background:B[0], margin:'1px 0' }}>
-          <div style={{ padding:'12px 16px 0', fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.6 }}>Orçamentos</div>
-          {data.quotes.map((q,i)=>(<div key={q.id} style={{ padding:'11px 16px', borderBottom:`1px solid ${B[100]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}><div><div style={{ fontSize:12, fontWeight:800, color:B[600], fontFamily:'monospace' }}>{q.number}</div><div style={{ fontSize:12, color:B[700] }}>{q.contact_name}</div></div><div style={{ textAlign:'right' }}><div style={{ fontSize:14, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(q.total)}</div><Tag label={STATUS_LABEL[q.status]||q.status} variant={q.status==='approved'?'success':q.status==='rejected'?'urgente':'default'} /></div></div>))}
-        </div>
-      </div>)}
-      {sub==='pedidos'&&(<div>
-        <div style={{ background:B[0], margin:'1px 0' }}>
-          <div style={{ padding:'12px 16px 0', fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.6 }}>Pedidos Recentes</div>
-          {data.orders.map(o=>(<div key={o.id} style={{ padding:'11px 16px', borderBottom:`1px solid ${B[100]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}><div><div style={{ fontSize:12, fontWeight:800, color:B[600], fontFamily:'monospace' }}>{o.number}</div><div style={{ fontSize:12, color:B[700] }}>{o.contact_name}</div><div style={{ fontSize:10, color:B[400] }}>{o.created_at}</div></div><div style={{ textAlign:'right' }}><div style={{ fontSize:14, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(o.total)}</div><div style={{ display:'flex', gap:4, justifyContent:'flex-end', marginTop:4 }}><span style={{ fontSize:8, fontWeight:900, padding:'2px 5px', background:o.origin==='erp'?B[800]:B[150], color:o.origin==='erp'?B[0]:B[700] }}>{o.origin==='erp'?'ERP':'Site'}</span><Tag label={STATUS_LABEL[o.status]||o.status} /></div></div></div>))}
-        </div>
-      </div>)}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// DESKTOP APP
-// ═══════════════════════════════════════════════
-function DesktopApp({ data, user, onLogout }) {
-  const [tab, setTab]         = useState('dashboard')
-  const [collapsed, setCollapsed] = useState(false)
-  const [orderOpen, setOrderOpen]         = useState(false)
-  const [orderCid, setOrderCid]           = useState(null)
-  const [addContactOpen, setAddContactOpen] = useState(false)
-  const nav = {
-    go:     (t)        => setTab(t),
-    order:  (cid=null) => { setOrderCid(cid); setOrderOpen(true) },
-    addContact: ()     => setAddContactOpen(true),
-  }
-
-  const NAV = [
-    { section:'Principal' },
-    { id:'dashboard', label:'Dashboard',   icon:'home'   },
-    { id:'pedidos',   label:'Pedidos',     icon:'cart'   },
-    { id:'conversas', label:'Conversas',   icon:'chat'   },
-    { section:'Clientes' },
-    { id:'contatos',  label:'Contatos',    icon:'user'   },
-    { id:'funil',     label:'Funil',       icon:'funnel' },
-    { section:'Marketing' },
-    { id:'marketing', label:'Marketing',   icon:'zap'    },
-    { id:'produtos',  label:'Catálogo ERP',icon:'erp'    },
-    { section:'Performance' },
-    { id:'metas',     label:'Metas',       icon:'target' },
-    { id:'gestao',    label:'Gestão',      icon:'bar'    },
-    { section:'Config.' },
-    { id:'erp',       label:'Integração ERP', icon:'settings' },
-  ]
-
-  const LABELS = { dashboard:'Dashboard', pedidos:'Pedidos', conversas:'Conversas', contatos:'Carteira de Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo de Produtos ERP', metas:'Metas & Performance', gestao:'Gestão & Relatórios', erp:'Integração ERP' }
-
-  const W = collapsed ? 56 : 220
-
-  return (
-    <div style={{ fontFamily:"'Inter',system-ui,sans-serif", background:B[50], height:'100dvh', display:'flex', overflow:'hidden' }}>
-      {/* Sidebar */}
-      <div style={{ width:W, background:B[900], display:'flex', flexDirection:'column', transition:'width .2s', overflow:'hidden', flexShrink:0 }}>
-        <div style={{ padding:collapsed?'18px 0 14px':'18px 16px 14px', borderBottom:`1px solid rgba(255,255,255,0.08)`, display:'flex', alignItems:'center', justifyContent:collapsed?'center':'flex-start', gap:10 }}>
-          {!collapsed ? <>
-            <img src="/logo.svg" alt="" style={{ height:36, filter:'brightness(0) invert(1)', flexShrink:0 }} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='block'}} />
-            <span style={{ display:'none', color:B[0], fontWeight:900, fontSize:13 }}>CRep.</span>
-          </> : <img src="/logo-mark.svg" alt="" style={{ height:30, filter:'brightness(0) invert(1)', flexShrink:0 }} onError={e=>{e.target.style.display='none'}} />}
-        </div>
-        <nav style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
-          {NAV.map((item,i)=>item.section
-            ? (!collapsed && <div key={i} style={{ padding:'10px 16px 2px', fontSize:10, fontWeight:500, color:'rgba(255,255,255,0.28)', letterSpacing:.2 }}>{item.section}</div>)
-            : <button key={item.id} onClick={()=>setTab(item.id)} title={collapsed?item.label:undefined} style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:collapsed?'11px 0':'11px 16px', justifyContent:collapsed?'center':'flex-start', background:tab===item.id?'rgba(255,255,255,0.1)':'none', borderLeft:`3px solid ${tab===item.id?B[400]:'transparent'}`, border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit', transition:'all .12s' }}>
-                <Ic n={item.icon} s={18} c={tab===item.id?B[300]:B[600]} />
-                {!collapsed && <span style={{ fontSize:13, fontWeight:tab===item.id?700:400, color:tab===item.id?B[0]:'rgba(255,255,255,0.55)' }}>{item.label}</span>}
-              </button>
-          )}
+            );
+          })}
         </nav>
-        <div style={{ borderTop:`1px solid rgba(255,255,255,0.08)`, padding:collapsed?'12px 0':'12px 14px', display:'flex', alignItems:'center', gap:10, justifyContent:collapsed?'center':'flex-start' }}>
-          <Av lbl={(user?.full_name||'CS').split(' ').map(w=>w[0]).join('').slice(0,2)} sz={32} bg={B[600]} />
-          {!collapsed && <div style={{ flex:1 }}><div style={{ color:B[0], fontWeight:600, fontSize:12 }}>{user?.full_name||'Demo'}</div><div style={{ color:'rgba(255,255,255,0.4)', fontSize:10 }}>{user?.role||'Representante'}</div></div>}
-          {!collapsed && <button onClick={onLogout} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="logout" s={16} c={B[600]} /></button>}
-        </div>
-        <button onClick={()=>setCollapsed(c=>!c)} style={{ background:'rgba(255,255,255,0.05)', border:'none', borderTop:`1px solid rgba(255,255,255,0.08)`, color:'rgba(255,255,255,0.4)', padding:'9px', cursor:'pointer', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-          <Ic n={collapsed?'chevR':'back'} s={13} c="rgba(255,255,255,0.4)" />
-          {!collapsed && <span>Recolher</span>}
-        </button>
-      </div>
 
-      {/* Main */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
-        {/* Topbar */}
-        <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', height:58, flexShrink:0 }}>
-          <div>
-            <div style={{ fontSize:16, fontWeight:800, color:B[800] }}>{LABELS[tab]||tab}</div>
-            <div style={{ fontSize:10, color:B[500], fontWeight:600, letterSpacing:.5, textTransform:'uppercase' }}>Junho 2025 · MG, Brasil</div>
+        <div style={{ padding: "10px 8px", borderTop: `1px solid ${C.inkLight}` }}>
+          <button onClick={() => setCollapsed(!collapsed)}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 8px", borderRadius: 7, border: "none", cursor: "pointer", background: "transparent", color: "#64748B", marginBottom: 8 }}>
+            <Menu size={17} />
+            {!collapsed && <span style={{ fontSize: 12 }}>Recolher</span>}
+          </button>
+          {/* WhatsApp status badge */}
+          <button onClick={() => setAppView("whatsapp")}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, border: "none", cursor: "pointer", background: "transparent", marginBottom: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: waStatus === "connected" ? C.green : waStatus === "connecting" ? C.gold : "#64748B", flexShrink: 0 }} />
+            {!collapsed && <span style={{ fontSize: 11, color: waStatus === "connected" ? C.green : waStatus === "connecting" ? C.gold : "#64748B", fontWeight: 600 }}>
+              {waStatus === "connected" ? "WhatsApp conectado" : waStatus === "connecting" ? "Conectando..." : "WhatsApp desconectado"}
+            </span>}
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px" }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, fontWeight: 800, color: C.ink }}>MR</div>
+            {!collapsed && (
+              <div>
+                <div style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>Marcos Rezende</div>
+                <div style={{ color: "#64748B", fontSize: 10 }}>Representante Sr.</div>
+              </div>
+            )}
           </div>
-          <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-            <div style={{ position:'relative' }}>
-              <button style={{ background:B[50], border:`1px solid ${B[200]}`, color:B[600], padding:'7px', cursor:'pointer', display:'flex' }}><Ic n="bell" s={16} /></button>
-              <div style={{ position:'absolute', top:-3, right:-3, width:14, height:14, background:B[500], color:B[0], fontSize:8, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>5</div>
-            </div>
-            <button onClick={()=>nav.order()} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Pedido</button>
-            <Av lbl={(user?.full_name||'CS').split(' ').map(w=>w[0]).join('').slice(0,2)} sz={32} bg={B[700]} />
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Topbar */}
+        <div style={{ background: C.card, borderBottom: `1px solid ${C.border}`, padding: "0 24px", height: 58, display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{viewLabel[appView]}</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Junho 2026 · Região MG</div>
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            <button style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
+              <Bell size={15} color={C.muted} />
+              <span style={{ position: "absolute", top: 7, right: 7, width: 6, height: 6, background: C.orange, borderRadius: "50%" }} />
+            </button>
+            <button style={{ padding: "8px 14px", background: C.green, color: C.ink, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <Plus size={13} /> Novo Atendimento
+            </button>
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ flex:1, overflow:['conversas','pedidos','produtos'].includes(tab)?'hidden':'auto' }}>
-          {tab==='dashboard' && <DesktopDashboard data={data} />}
-          {tab==='pedidos'   && <DesktopPedidos   data={data} nav={nav} />}
-          {tab==='conversas' && <DesktopConversas data={data} />}
-          {tab==='contatos'  && <DesktopContatos  data={data} nav={nav} />}
-          {tab==='funil'     && <DesktopFunil      data={data} nav={nav} />}
-          {tab==='marketing' && <Marketing         data={data} nav={nav} />}
-          {tab==='produtos'  && <ProdutosERP       data={data} />}
-          {tab==='metas'     && <DesktopMetas      data={data} />}
-          {tab==='gestao'    && <DesktopGestao     data={data} nav={nav} />}
-          {tab==='erp'       && <DesktopErp        data={data} />}
+        <div style={{ flex: 1, overflow: appView === "chat" ? "hidden" : "auto" }}>
+          {appView === "home" && <HomeView visits={visits} quotes={pendingQuotes} contracts={contracts} />}
+          {appView === "chat" && (
+            <ChatView
+              conversations={conversations} selectedConv={selectedConv} setSelectedConv={setSelectedConv}
+              msgs={msgs} chatInput={chatInput} setChatInput={setChatInput} sendMessage={sendMessage}
+              messagesEndRef={messagesEndRef} assistedTab={assistedTab} setAssistedTab={setAssistedTab}
+              filteredProducts={filteredProducts} addToCart={addToCart} cartItems={cartItems}
+              cartTotal={cartTotal} searchProd={searchProd} setSearchProd={setSearchProd} setCartItems={setCartItems}
+            />
+          )}
+          {appView === "analytics" && <AnalyticsView monthlyData={monthlyData} topProducts={topProducts} funnelData={funnelData} />}
+          {appView === "orders" && <OrdersView />}
+          {appView === "whatsapp" && <WhatsAppConnectView waStatus={waStatus} setWaStatus={setWaStatus} />}
         </div>
       </div>
-    
-      {/* Modals */}
-      <OrderModal data={data} open={orderOpen} onClose={()=>{setOrderOpen(false);setOrderCid(null)}} initialClientId={orderCid} />
-      {addContactOpen && <AddContactModal data={data} onClose={()=>setAddContactOpen(false)} />}</div>
-  )
+    </div>
+  );
 }
 
-// ─── Desktop pages ────────────────────────────
-function DesktopDashboard({ data }) {
-  const s = data.stats
+// ── Landing Page ───────────────────────────────────────────────────────────────
+function LandingPage({ onEnter }) {
+  const features = [
+    { icon: MessageSquare, title: "CRM nativo no WhatsApp", desc: "Gerencie todas as conversas com clientes na plataforma. Histórico completo, etiquetas e funil de vendas integrados." },
+    { icon: Zap, title: "ERP Integrado em tempo real", desc: "Envie orçamentos, boletos e notas fiscais automaticamente direto da conversa, sem sair da tela." },
+    { icon: TrendingUp, title: "Inteligência de Vendas", desc: "Dashboard com conversão, produtos top, visitas e previsão de fechamentos atualizado a cada pedido." },
+  ];
+
   return (
-    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
+    <div style={{ fontFamily: "'Inter',-apple-system,sans-serif", minHeight: "100vh", background: C.ink }}>
+      {/* Nav */}
+      <nav style={{ padding: "0 40px", height: 60, display: "flex", alignItems: "center", borderBottom: `1px solid ${C.inkLight}`, position: "sticky", top: 0, zIndex: 50, background: C.ink }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 30, height: 30, background: C.green, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <MessageSquare size={15} color={C.ink} />
+          </div>
+          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>C<span style={{ color: C.green }}>Representante</span></span>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
+          {["Funcionalidades", "Preços", "Cases"].map((l) => (
+            <button key={l} style={{ color: "#94A3B8", background: "none", border: "none", fontSize: 13, cursor: "pointer" }}>{l}</button>
+          ))}
+          <button onClick={onEnter} style={{ padding: "8px 18px", background: C.green, color: C.ink, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            Entrar →
+          </button>
+        </div>
+      </nav>
+
       {/* Hero */}
-      <div style={{ background:`linear-gradient(135deg,${B[900]},${B[800]})`, padding:'14px 24px', display:'flex', gap:24, alignItems:'center', flexWrap:'wrap' }}>
-        <div><div style={{ fontSize:11, color:B[400], textTransform:'uppercase', letterSpacing:1, marginBottom:4 }}>Realizado — Junho 2025</div><div style={{ fontSize:30, fontWeight:900, color:B[0], letterSpacing:-1, fontVariantNumeric:'tabular-nums' }}>{fmt(s.salesMonth)}</div></div>
-        <div style={{ paddingBottom:4 }}><div style={{ fontSize:11, color:B[400] }}>Meta</div><div style={{ fontSize:20, fontWeight:700, color:B[300], fontVariantNumeric:'tabular-nums' }}>{fmt(s.target)}</div></div>
-        <div style={{ flex:1, minWidth:200, paddingBottom:8 }}><div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}><span style={{ fontSize:11, color:B[400] }}>Atingimento</span><span style={{ fontSize:15, fontWeight:800, color:B[200] }}>{s.attainment}%</span></div><div style={{ background:B[700], height:8 }}><div style={{ width:`${s.attainment}%`, height:8, background:B[400] }} /></div></div>
-        <div style={{ display:'flex', gap:28 }}>
-          {[['Conversão',`${s.conversionRate}%`],['Ticket médio',`R$${(s.avgTicket/1000).toFixed(0)}k`],['Pipeline',`R$${(s.pipeline/1000).toFixed(0)}k`]].map(([l,v])=>(<div key={l}><div style={{ fontSize:10, color:B[400], textTransform:'uppercase', letterSpacing:.5, marginBottom:2 }}>{l}</div><div style={{ fontSize:18, fontWeight:800, color:B[0] }}>{v}</div></div>))}
+      <section style={{ padding: "72px 40px 56px", maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 56, alignItems: "center" }}>
+        <div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#00C85320", border: `1px solid ${C.green}40`, borderRadius: 20, padding: "4px 12px", marginBottom: 22 }}>
+            <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%" }} />
+            <span style={{ color: C.green, fontSize: 11, fontWeight: 600 }}>Primeiro CRM de WhatsApp para Representantes</span>
+          </div>
+          <h1 style={{ color: "#fff", fontSize: 44, fontWeight: 900, lineHeight: 1.1, margin: "0 0 18px", letterSpacing: "-1px" }}>
+            Venda mais pelo<br /><span style={{ color: C.green }}>WhatsApp</span><br />conectado ao ERP
+          </h1>
+          <p style={{ color: "#94A3B8", fontSize: 16, lineHeight: 1.65, margin: "0 0 30px" }}>
+            Gerencie clientes, envie orçamentos e feche pedidos direto no WhatsApp — com integração automática ao ERP, sem sair da conversa.
+          </p>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button onClick={onEnter} style={{ padding: "13px 26px", background: C.green, color: C.ink, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+              Ver plataforma →
+            </button>
+            <button style={{ padding: "13px 26px", background: "transparent", color: "#fff", border: `1px solid ${C.inkLight}`, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>
+              Como funciona
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 28, marginTop: 30 }}>
+            {[["800+", "Representantes"], ["R$2,4M", "Em pedidos/mês"], ["94%", "Satisfação"]].map(([v, l]) => (
+              <div key={l}>
+                <div style={{ color: C.green, fontSize: 20, fontWeight: 900 }}>{v}</div>
+                <div style={{ color: "#64748B", fontSize: 11, marginTop: 2 }}>{l}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
+        {/* App preview */}
+        <div style={{ background: C.inkMid, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.inkLight}`, boxShadow: "0 32px 80px rgba(0,0,0,0.4)" }}>
+          <div style={{ background: "#0A1A2E", padding: "10px 14px", display: "flex", gap: 6, alignItems: "center" }}>
+            {["#FF5F57","#FFBD2E","#28C840"].map(c => <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />)}
+            <div style={{ marginLeft: 8, color: "#64748B", fontSize: 10 }}>CRepresentante — Elétrica Horizonte</div>
+          </div>
+          <div style={{ padding: 14, display: "flex", gap: 10 }}>
+            <div style={{ width: 110, flexShrink: 0 }}>
+              {conversations.slice(0, 4).map((c, i) => (
+                <div key={c.id} style={{ padding: "7px 5px", borderRadius: 5, background: i === 0 ? C.inkLight : "transparent", marginBottom: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 800, color: C.ink, flexShrink: 0 }}>{c.avatar}</div>
+                  <div style={{ overflow: "hidden" }}>
+                    <div style={{ color: "#fff", fontSize: 8, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name.split(" ")[0]}</div>
+                    <div style={{ color: "#64748B", fontSize: 7, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.lastMsg.slice(0, 16)}…</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1 }}>
+              {initMsgs.slice(2, 7).map((m) => (
+                <div key={m.id} style={{ marginBottom: 5, display: "flex", justifyContent: m.from === "rep" ? "flex-end" : m.from === "system" ? "center" : "flex-start" }}>
+                  <div style={{ background: m.from === "rep" ? C.green : m.from === "system" ? C.inkLight : "#253545", color: m.from === "rep" ? C.ink : "#fff", padding: "4px 7px", borderRadius: 6, fontSize: 7.5, maxWidth: "86%", lineHeight: 1.4 }}>
+                    {m.text.slice(0, 42)}{m.text.length > 42 ? "…" : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ margin: "0 14px 14px", background: "#0A1A2E", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: C.green, fontSize: 8.5, fontWeight: 800, marginBottom: 6 }}>⚡ COMPRA ASSISTIDA · ERP</div>
+            {[["Cabo PP 4mm² × 200", "R$ 17.980"], ["Disjuntor 100A × 50", "R$ 3.390"]].map(([label, val]) => (
+              <div key={label} style={{ background: C.inkLight, borderRadius: 4, padding: "4px 8px", marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#fff", fontSize: 7.5 }}>{label}</span>
+                <span style={{ color: C.gold, fontSize: 7.5, fontWeight: 700 }}>{val}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 6, background: C.green, borderRadius: 4, padding: "5px 8px", textAlign: "center" }}>
+              <span style={{ color: C.ink, fontSize: 8, fontWeight: 800 }}>📤 Enviar Orçamento via WhatsApp</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section style={{ padding: "0 40px 60px", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <h2 style={{ color: "#fff", fontSize: 26, fontWeight: 800, margin: "0 0 10px" }}>Tudo que um representante precisa</h2>
+          <p style={{ color: "#64748B", fontSize: 14, margin: 0 }}>Integrado. Automatizado. No WhatsApp.</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+          {features.map((f) => (
+            <div key={f.title} style={{ background: C.inkMid, borderRadius: 12, padding: 22, border: `1px solid ${C.inkLight}` }}>
+              <div style={{ width: 38, height: 38, background: "#00C85318", border: `1px solid ${C.green}30`, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                <f.icon size={18} color={C.green} />
+              </div>
+              <h3 style={{ color: "#fff", fontSize: 14, fontWeight: 700, margin: "0 0 8px" }}>{f.title}</h3>
+              <p style={{ color: "#64748B", fontSize: 12.5, lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ padding: "0 40px 64px", textAlign: "center" }}>
+        <div style={{ background: `linear-gradient(140deg, ${C.inkMid}, #0D2E4A)`, borderRadius: 14, padding: "44px 40px", maxWidth: 680, margin: "0 auto", border: `1px solid ${C.green}28` }}>
+          <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>Pronto para transformar suas vendas?</h2>
+          <p style={{ color: "#94A3B8", fontSize: 13.5, margin: "0 0 26px" }}>Comece agora — grátis por 14 dias.</p>
+          <button onClick={onEnter} style={{ padding: "13px 30px", background: C.green, color: C.ink, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+            Acessar plataforma gratuitamente →
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ── Home View ──────────────────────────────────────────────────────────────────
+function HomeView({ visits, quotes, contracts }) {
+  const kpis = [
+    { label: "Receita do Mês", value: "R$ 178.400", delta: "+12% vs mai", icon: DollarSign, color: C.green, bg: C.greenBg },
+    { label: "Meta Junho", value: "R$ 185.000", delta: "96% atingido", icon: Target, color: C.blue, bg: "#EEF2FF" },
+    { label: "Clientes Ativos", value: "47", delta: "+3 este mês", icon: Users, color: C.gold, bg: C.goldBg },
+    { label: "Ticket Médio", value: "R$ 3.795", delta: "+8% vs mai", icon: TrendingUp, color: C.orange, bg: C.orangeBg },
+  ];
+
+  return (
+    <div style={{ padding: 24 }}>
       {/* KPIs */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, background:B[200] }}>
-        <KpiCard label="Orçamentos abertos"  value={s.openQuotes}          sub={fmt(s.openQuotesValue)} icon="file"   accent delta={`+${s.openQuotes}`} />
-        <KpiCard label="Pedidos este mês"    value={s.pendingOrders}       sub="em andamento"          icon="cart"   accent />
-        <KpiCard label="Visitas marcadas"    value={s.visitsUpcoming}      sub="próximas"              icon="cal"    accent />
-        <KpiCard label="Clientes ativos"     value={s.contactsTotal}       sub="na carteira"           icon="users"  accent />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
+        {kpis.map((k) => (
+          <div key={k.label} style={{ background: C.card, borderRadius: 12, padding: 18, border: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>{k.label}</div>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <k.icon size={14} color={k.color} />
+              </div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: C.text, marginBottom: 4 }}>{k.value}</div>
+            <div style={{ fontSize: 10.5, color: k.color, fontWeight: 600 }}>↑ {k.delta}</div>
+          </div>
+        ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:20 }}>
-        {/* Chart */}
-        <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'20px 20px 12px' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:B[800], marginBottom:14 }}>Vendas vs Meta — 2025</div>
-          <ResponsiveContainer width="100%" height={175}>
-            <BarChart data={data.monthData} barSize={20} barGap={4}>
-              <CartesianGrid strokeDasharray="2 4" stroke={B[150]} />
-              <XAxis dataKey="m" tick={{ fontSize:11, fill:B[400] }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize:10, fill:B[400] }} axisLine={false} tickLine={false} tickFormatter={v=>`${v/1000}k`} />
-              <Tooltip formatter={v=>fmt(v)} contentStyle={{ border:`1px solid ${B[200]}`, borderRadius:0, fontSize:12 }} />
-              <Bar dataKey="t" fill={B[150]} name="Meta" /><Bar dataKey="v" fill={B[800]} name="Vendas" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        {/* Sidebar right */}
-        <div style={{ display:'flex', flexDirection:'column', gap:1 }}>
-          <div style={{ background:B[0], border:`1px solid ${B[150]}`, flex:1 }}>
-            <div style={{ padding:'13px 16px', borderBottom:`1px solid ${B[150]}`, fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.6 }}>Próximas Visitas</div>
-            {data.visits.map(v=>(
-              <div key={v.id} style={{ padding:'11px 16px', borderBottom:`1px solid ${B[100]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div><div style={{ fontSize:12, fontWeight:700, color:B[800] }}>{v.contact_name}</div><div style={{ fontSize:11, color:B[500] }}>{v.scheduled_at} · {v.type}</div></div>
-                <div style={{ display:'flex', gap:5 }}>
-                  <span style={{ fontSize:9, fontWeight:800, padding:'2px 6px', textTransform:'uppercase', background:v.origin==='erp'?B[800]:B[150], color:v.origin==='erp'?B[0]:B[700] }}>{v.origin==='erp'?'ERP':'Site'}</span>
-                  <Tag label={v.status==='confirmed'?'Confirmado':'Pendente'} variant={v.status==='confirmed'?'success':'warn'} />
+      {/* 3 columns */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+        {/* Visitas */}
+        <div style={{ background: C.card, borderRadius: 12, padding: 18, border: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>Visitas Marcadas</div>
+            <Calendar size={14} color={C.muted} />
+          </div>
+          {visits.map((v, i) => (
+            <div key={i} style={{ padding: "10px 0", borderBottom: i < visits.length - 1 ? `1px solid ${C.border}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{v.client}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted, marginTop: 1 }}>{v.type}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink }}>{v.time}</div>
+                  <div style={{ fontSize: 10, color: v.date === "Hoje" ? C.orange : C.muted, fontWeight: v.date === "Hoje" ? 600 : 400 }}>{v.date}</div>
                 </div>
               </div>
-            ))}
-          </div>
-          <div style={{ background:B[0], border:`1px solid ${B[150]}` }}>
-            <div style={{ padding:'13px 16px', borderBottom:`1px solid ${B[150]}`, fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.6 }}>Orçamentos</div>
-            {data.quotes.slice(0,3).map(q=>(
-              <div key={q.id} style={{ padding:'10px 16px', borderBottom:`1px solid ${B[100]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div><div style={{ fontSize:11, fontWeight:800, color:B[600], fontFamily:'monospace' }}>{q.number}</div><div style={{ fontSize:11, color:B[700] }}>{q.contact_name}</div></div>
-                <div style={{ textAlign:'right' }}><div style={{ fontSize:13, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(q.total)}</div><Tag label={STATUS_LABEL[q.status]||q.status} variant={q.status==='approved'?'success':q.status==='rejected'?'urgente':'default'} /></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DesktopPedidos({ data }) {
-  const [clientId, setClientId] = useState(data.contacts.filter(c=>c.stage!=='prospect')[0]?.id)
-  const client = data.contacts.find(c=>c.id===clientId)
-  return (
-    <div style={{ display:'flex', height:'100%' }}>
-      {/* Client selector */}
-      <div style={{ width:240, background:B[0], borderRight:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0 }}>
-        <div style={{ padding:'14px 16px', borderBottom:`1px solid ${B[150]}` }}>
-          <div style={{ fontSize:11, fontWeight:800, color:B[800], textTransform:'uppercase', letterSpacing:.7, marginBottom:10 }}>Selecionar Cliente</div>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'8px 10px' }}>
-            <Ic n="search" s={14} c={B[400]} /><input placeholder="Buscar..." style={{ border:'none', background:'none', outline:'none', fontSize:12, color:B[800], flex:1, fontFamily:'inherit' }} />
-          </div>
-        </div>
-        <div style={{ flex:1, overflowY:'auto' }}>
-          {data.contacts.filter(c=>c.stage!=='prospect').map(c=>(
-            <div key={c.id} onClick={()=>setClientId(c.id)} style={{ padding:'11px 14px', cursor:'pointer', background:clientId===c.id?B[50]:B[0], borderLeft:`3px solid ${clientId===c.id?B[800]:'transparent'}`, borderBottom:`1px solid ${B[100]}`, display:'flex', gap:10, alignItems:'center' }}>
-              <Av lbl={c.av} sz={32} bg={clientId===c.id?B[800]:B[700]} />
-              <div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:12, fontWeight:700, color:B[800], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</div><div style={{ fontSize:10, color:B[500] }}>{c.company}</div>{c.pipeline_value>0&&<div style={{ fontSize:11, fontWeight:700, color:B[600], fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}</div>
             </div>
           ))}
         </div>
-      </div>
-      {/* Order builder */}
-      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minHeight:0 }}>
-        <OrderPanel contact={client} products={data.products} promotions={data.promotions} combos={data.combos} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={data.createOrder} />
-      </div>
-      {/* Order history */}
-      <div style={{ width:280, background:B[0], borderLeft:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0 }}>
-        <div style={{ padding:'13px 16px', borderBottom:`1px solid ${B[150]}`, fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.6 }}>Pedidos Recentes</div>
-        <div style={{ flex:1, overflowY:'auto' }}>
-          {data.orders.map(o=>(
-            <div key={o.id} style={{ padding:'12px 14px', borderBottom:`1px solid ${B[100]}` }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                <span style={{ fontSize:12, fontWeight:800, color:B[600], fontFamily:'monospace' }}>{o.number}</span>
-                <div style={{ display:'flex', gap:4 }}>
-                  <span style={{ fontSize:8, fontWeight:900, padding:'2px 5px', background:o.origin==='erp'?B[800]:B[150], color:o.origin==='erp'?B[0]:B[700] }}>{o.origin==='erp'?'ERP':'Site'}</span>
-                  <Tag label={STATUS_LABEL[o.status]||o.status} />
+
+        {/* Orçamentos */}
+        <div style={{ background: C.card, borderRadius: 12, padding: 18, border: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>Orçamentos Pendentes</div>
+            <FileText size={14} color={C.muted} />
+          </div>
+          {quotes.map((q, i) => (
+            <div key={i} style={{ padding: "10px 0", borderBottom: i < quotes.length - 1 ? `1px solid ${C.border}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{q.client}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted, marginTop: 1 }}>{q.value}</div>
                 </div>
+                <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: q.urgent ? C.redBg : C.goldBg, color: q.urgent ? C.red : C.gold }}>
+                  {q.deadline}
+                </span>
               </div>
-              <div style={{ fontSize:12, color:B[700] }}>{o.contact_name}</div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-                <span style={{ fontSize:11, color:B[400] }}>{o.created_at}</span>
-                <span style={{ fontSize:13, fontWeight:800, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(o.total)}</span>
+            </div>
+          ))}
+          <button style={{ width: "100%", marginTop: 12, padding: "8px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontWeight: 600, color: C.muted, cursor: "pointer" }}>
+            + Criar orçamento
+          </button>
+        </div>
+
+        {/* Contratos */}
+        <div style={{ background: C.card, borderRadius: 12, padding: 18, border: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>Fechamentos Próximos</div>
+            <CheckCircle size={14} color={C.muted} />
+          </div>
+          {contracts.map((c, i) => (
+            <div key={i} style={{ padding: "10px 0", borderBottom: i < contracts.length - 1 ? `1px solid ${C.border}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{c.client}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted }}>{c.stage}</div>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>{c.value}</div>
               </div>
+              <div style={{ height: 5, background: C.surface, borderRadius: 3 }}>
+                <div style={{ height: 5, background: c.prob > 70 ? C.green : c.prob > 50 ? C.gold : C.orange, borderRadius: 3, width: `${c.prob}%` }} />
+              </div>
+              <div style={{ fontSize: 9.5, color: C.muted, marginTop: 2 }}>{c.prob}% probabilidade</div>
             </div>
           ))}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function DesktopConversas({ data }) {
-  const [activeId, setActiveId]   = useState(data.contacts[0]?.id)
-  const [msgs, setMsgs]           = useState({ ...MOCK.messages })
-  const [rightTab, setRightTab]   = useState('info') // info | order
-  const [search, setSearch]       = useState('')
-
-  const ac      = data.contacts.find(c => c.id === activeId)
-  const sendMsg = text => {
-    const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
-    setMsgs(m => ({ ...m, [activeId]: [...(m[activeId]||[]), { from:'m', text, time:now }] }))
-  }
-
-  const filteredContacts = data.contacts.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.company.toLowerCase().includes(search.toLowerCase())
-  )
+// ── Chat View ──────────────────────────────────────────────────────────────────
+function ChatView({ conversations, selectedConv, setSelectedConv, msgs, chatInput, setChatInput, sendMessage, messagesEndRef, assistedTab, setAssistedTab, filteredProducts, addToCart, cartItems, cartTotal, searchProd, setSearchProd, setCartItems }) {
+  const conv = conversations[selectedConv];
 
   return (
-    <div style={{ display:'flex', height:'100%', minHeight:0 }}>
-
-      {/* ── Col 1: Contact list ── */}
-      <div style={{ width:264, background:B[0], borderRight:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0, minHeight:0 }}>
-        <div style={{ padding:'12px 12px', borderBottom:`1px solid ${B[150]}`, flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'8px 10px' }}>
-            <Ic n="search" s={13} c={B[400]} />
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar contato..."
-              style={{ border:'none', background:'none', outline:'none', fontSize:12, color:B[800], flex:1, fontFamily:'inherit' }} />
+    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+      {/* Conversation list */}
+      <div style={{ width: 272, background: C.card, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.surface, borderRadius: 8, padding: "7px 11px" }}>
+            <Search size={13} color={C.muted} />
+            <input placeholder="Buscar conversa..." style={{ border: "none", background: "transparent", fontSize: 12, color: C.text, outline: "none", flex: 1 }} />
           </div>
         </div>
-        <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
-          {filteredContacts.map(c => {
-            const last = (msgs[c.id]||[]).at(-1)
-            const isActive = activeId === c.id
+        <div style={{ overflow: "auto", flex: 1 }}>
+          {conversations.map((c, i) => {
+            const tc = tagColor[c.tag] || { bg: C.surface, text: C.muted };
             return (
-              <div key={c.id} onClick={() => { setActiveId(c.id); setRightTab('info') }}
-                style={{ display:'flex', gap:10, padding:'11px 12px', cursor:'pointer', alignItems:'center',
-                  background: isActive ? B[50] : B[0],
-                  borderLeft: `3px solid ${isActive ? B[800] : 'transparent'}`,
-                  borderBottom: `1px solid ${B[100]}` }}>
-                <div style={{ position:'relative', flexShrink:0 }}>
-                  <Av lbl={c.av} sz={36} bg={isActive?B[700]:B[800]} />
-                  {c.unread>0 && <div style={{ position:'absolute', top:-3, right:-3, width:15, height:15, background:B[500], borderRadius:'50%', fontSize:8, fontWeight:900, color:B[0], display:'flex', alignItems:'center', justifyContent:'center' }}>{c.unread}</div>}
+              <div key={c.id} onClick={() => setSelectedConv(i)}
+                style={{ padding: "11px 14px", cursor: "pointer", background: selectedConv === i ? C.surface : "transparent", borderLeft: `3px solid ${selectedConv === i ? C.green : "transparent"}`, display: "flex", gap: 10 }}>
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: C.ink }}>{c.avatar}</div>
+                  {c.unread > 0 && <div style={{ position: "absolute", top: -2, right: -2, width: 16, height: 16, background: C.green, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: C.ink }}>{c.unread}</div>}
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                    <span style={{ fontSize:12, fontWeight:isActive?700:500, color:B[800], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span>
-                    <span style={{ fontSize:9, color:B[400], flexShrink:0, marginLeft:4 }}>{c.last_contact_at}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{c.name}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{c.time}</span>
                   </div>
-                  <div style={{ fontSize:11, color:B[500], overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {last?.text?.split('\n')[0] || c.company}
-                  </div>
-                  {c.stage && <div style={{ marginTop:3 }}><Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} /></div>}
+                  <div style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 4 }}>{c.lastMsg}</div>
+                  <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4, background: tc.bg, color: tc.text }}>{c.tag}</span>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
 
-      {/* ── Col 2: Chat ── */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', minHeight:0, minWidth:0 }}>
-        <ChatPanel
-          contact={ac}
-          msgs={msgs[activeId]||[]}
-          onSend={sendMsg}
-          rightSlot={
-            <button onClick={() => setRightTab(t => t==='order'?'info':'order')}
-              style={{ padding:'6px 12px', background:rightTab==='order'?B[0]:B[600], color:rightTab==='order'?B[800]:B[0], border:rightTab==='order'?`1px solid ${B[300]}`:'none', fontSize:10, fontWeight:800, cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', gap:5 }}>
-              <Ic n="cart" s={12} c={rightTab==='order'?B[800]:B[0]} />
-              {rightTab==='order' ? 'Fechar' : 'Pedido'}
+      {/* Chat panel */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f0f2f5" }}>
+        <div style={{ background: C.card, padding: "11px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: C.ink }}>{conv.avatar}</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{conv.name}</div>
+            <div style={{ fontSize: 10.5, color: C.muted }}>{conv.city}</div>
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 7 }}>
+            <button style={{ padding: "6px 11px", background: C.greenBg, color: C.greenDark, border: "none", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>📋 Histórico ERP</button>
+            <button style={{ padding: "6px 10px", background: C.surface, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <MoreVertical size={14} />
             </button>
-          }
-        />
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "18px 22px", display: "flex", flexDirection: "column", gap: 6 }}>
+          {msgs.map((m) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: m.from === "rep" ? "flex-end" : m.from === "system" ? "center" : "flex-start" }}>
+              {m.from === "system" ? (
+                <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 12px", fontSize: 11, color: C.muted, display: "flex", alignItems: "center", gap: 5 }}>
+                  <CheckCircle size={11} color={C.green} /> {m.text}
+                </div>
+              ) : (
+                <div style={{ background: m.from === "rep" ? C.green : "#fff", color: m.from === "rep" ? C.ink : C.text, padding: "8px 12px", borderRadius: m.from === "rep" ? "12px 3px 12px 12px" : "3px 12px 12px 12px", maxWidth: "64%", fontSize: 13, lineHeight: 1.5, boxShadow: "0 1px 2px rgba(0,0,0,0.07)" }}>
+                  {m.text}
+                  <div style={{ fontSize: 9.5, color: m.from === "rep" ? `${C.ink}88` : C.muted, textAlign: "right", marginTop: 3 }}>{m.time}{m.from === "rep" && " ✓✓"}</div>
+                </div>
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div style={{ background: C.card, padding: "11px 18px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 8, alignItems: "center" }}>
+          <button style={{ width: 34, height: 34, borderRadius: "50%", background: C.surface, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <Paperclip size={15} color={C.muted} />
+          </button>
+          <div style={{ flex: 1, background: C.surface, borderRadius: 20, padding: "8px 14px" }}>
+            <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Digite uma mensagem..." style={{ width: "100%", border: "none", background: "transparent", fontSize: 13, color: C.text, outline: "none" }} />
+          </div>
+          <button onClick={sendMessage} style={{ width: 34, height: 34, borderRadius: "50%", background: C.green, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <Send size={15} color={C.ink} />
+          </button>
+        </div>
       </div>
 
-      {/* ── Col 3: Right panel ── */}
-      <div style={{ width:308, background:B[0], borderLeft:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0, minHeight:0 }}>
-        {/* Tab header */}
-        <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}`, flexShrink:0 }}>
-          {[['info','Contato'],['order','Compra Assistida']].map(([id,lbl]) => (
-            <button key={id} onClick={() => setRightTab(id)} style={{
-              flex:1, padding:'10px 6px', background:'none', border:'none', cursor:'pointer',
-              fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:.5,
-              color:      rightTab===id ? B[800] : B[400],
-              borderBottom: rightTab===id ? `2px solid ${B[800]}` : '2px solid transparent',
-              marginBottom:-1,
-            }}>{lbl}</button>
+      {/* Assisted panel */}
+      <div style={{ width: 312, background: C.card, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          {[["compra", "⚡ Compra Assistida"], ["anuncio", "📢 Anúncio"]].map(([id, label]) => (
+            <button key={id} onClick={() => setAssistedTab(id)}
+              style={{ flex: 1, padding: "11px 6px", border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 600, background: assistedTab === id ? C.card : C.surface, color: assistedTab === id ? C.green : C.muted, borderBottom: `2px solid ${assistedTab === id ? C.green : "transparent"}` }}>
+              {label}
+            </button>
           ))}
         </div>
 
-        {rightTab === 'info' ? (
-          /* ── Contact info ── */
-          <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
-            {/* Hero */}
-            <div style={{ padding:'16px', background:B[50], borderBottom:`1px solid ${B[150]}` }}>
-              <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:12 }}>
-                <Av lbl={ac?.av||'?'} sz={44} bg={B[800]} />
-                <div>
-                  <div style={{ fontSize:14, fontWeight:800, color:B[800] }}>{ac?.name}</div>
-                  <div style={{ fontSize:12, color:B[500] }}>{ac?.job_title||'—'}</div>
-                  <div style={{ fontSize:11, color:B[400] }}>{ac?.company}</div>
-                </div>
+        {assistedTab === "compra" ? (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "11px 14px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.surface, borderRadius: 8, padding: "7px 11px", marginBottom: 6 }}>
+                <Search size={12} color={C.muted} />
+                <input value={searchProd} onChange={(e) => setSearchProd(e.target.value)} placeholder="Buscar produto no ERP..." style={{ border: "none", background: "transparent", fontSize: 12, color: C.text, outline: "none", flex: 1 }} />
               </div>
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                {(ac?.tags||[]).map(t => <Tag key={t} label={t} variant={tagVariant(t)} />)}
-              </div>
+              <div style={{ fontSize: 10, color: C.muted }}>Estoque em tempo real · ERP integrado</div>
             </div>
-            {/* Actions */}
-            <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-              {[['phone','Ligar'],['chat','Chat'],['cal','Visita'],['file','Orçar']].map(([icon,lbl]) => (
-                <button key={lbl} style={{ flex:1, padding:'10px 4px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                  <Ic n={icon} s={17} c={B[800]} />
-                  <span style={{ fontSize:8, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.3 }}>{lbl}</span>
-                </button>
+
+            <div style={{ flex: 1, overflow: "auto", padding: "10px 12px" }}>
+              {filteredProducts.map((p) => (
+                <div key={p.id} style={{ background: C.surface, borderRadius: 8, padding: "9px 11px", marginBottom: 7, display: "flex", alignItems: "center", gap: 9 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: C.text }}>{p.name}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>{p.code} · {p.stock} em estoque</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginTop: 2 }}>R$ {p.price.toFixed(2)}/{p.unit}</div>
+                  </div>
+                  <button onClick={() => addToCart(p)} style={{ width: 26, height: 26, borderRadius: "50%", background: C.green, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    <Plus size={13} color={C.ink} />
+                  </button>
+                </div>
               ))}
             </div>
-            {/* Info rows */}
-            {ac && [
-              ['phone','Telefone', ac.phone],
-              ['mail', 'E-mail',   ac.email],
-              ['map',  'Cidade',   `${ac.city||'—'} · ${ac.state||'MG'}`],
-              ['funnel','Estágio', STAGE_LABEL[ac.stage]||ac.stage],
-            ].map(([icon,label,val]) => (
-              <div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderBottom:`1px solid ${B[100]}` }}>
-                <Ic n={icon} s={15} c={B[400]} />
-                <div>
-                  <div style={{ fontSize:9, color:B[400], marginBottom:1, textTransform:'uppercase', letterSpacing:.4 }}>{label}</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{val||'—'}</div>
+
+            {cartItems.length > 0 && (
+              <div style={{ borderTop: `1px solid ${C.border}`, padding: "12px 14px", flexShrink: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Orçamento em aberto</div>
+                {cartItems.map((item) => (
+                  <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 600, color: C.text }}>{item.name}</div>
+                      <div style={{ fontSize: 10, color: C.muted }}>R$ {item.price.toFixed(2)} × {item.qty}</div>
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.ink }}>R$ {(item.price * item.qty).toFixed(0)}</div>
+                    <button onClick={() => setCartItems((prev) => prev.filter((p) => p.id !== item.id))}
+                      style={{ width: 18, height: 18, borderRadius: "50%", background: C.redBg, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                      <X size={10} color={C.red} />
+                    </button>
+                  </div>
+                ))}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Total</span>
+                  <span style={{ fontSize: 15, fontWeight: 900, color: C.ink }}>R$ {cartTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
-              </div>
-            ))}
-            {ac?.pipeline_value>0 && (
-              <div style={{ padding:'12px 14px', borderBottom:`1px solid ${B[100]}` }}>
-                <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>Pipeline</div>
-                <div style={{ fontSize:20, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(ac.pipeline_value)}</div>
-                <div style={{ marginTop:4 }}><Tag label={STAGE_LABEL[ac.stage]||ac.stage} variant={ac.stage==='closing'?'success':ac.stage==='prospect'?'prospect':'default'} /></div>
-              </div>
-            )}
-            {ac?.notes && (
-              <div style={{ padding:'12px 14px' }}>
-                <div style={{ fontSize:9, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:6 }}>Notas</div>
-                <div style={{ fontSize:12, color:B[700], lineHeight:1.6, background:B[50], padding:'10px 12px', borderLeft:`3px solid ${B[800]}` }}>{ac.notes}</div>
+                <button style={{ width: "100%", padding: "10px", background: C.green, color: C.ink, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 6 }}>
+                  📤 Enviar Orçamento via WhatsApp
+                </button>
+                <button style={{ width: "100%", padding: "8px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                  Registrar como Pedido no ERP
+                </button>
               </div>
             )}
           </div>
         ) : (
-          /* ── Compra Assistida ── */
-          <div style={{ flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-            <OrderPanel
-              contact={ac}
-              products={data.products}
-              promotions={data.promotions}
-              combos={data.combos}
-              paymentTerms={data.paymentTerms}
-              deliveryOptions={data.deliveryOptions}
-              onSend={async (...args) => {
-                await data.createOrder(...args)
-                setRightTab('info')
-              }}
-              compact
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function DesktopContatos({ data }) {
-  const [selected, setSelected] = useState(null)
-  const [search, setSearch]     = useState('')
-  const [stageF, setStageF]     = useState('all')
-  const sc = data.contacts.find(c=>c.id===selected)
-  const list = data.contacts.filter(c=>(stageF==='all'||c.stage===stageF)&&(c.name.toLowerCase().includes(search.toLowerCase())||c.company.toLowerCase().includes(search.toLowerCase())))
-  return (
-    <div style={{ display:'flex', height:'100%' }}>
-      {/* Table */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        <div style={{ padding:'16px 24px', borderBottom:`1px solid ${B[150]}`, display:'flex', gap:12, alignItems:'center', background:B[0] }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'8px 12px', flex:1, maxWidth:300 }}>
-            <Ic n="search" s={14} c={B[400]} /><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..." style={{ border:'none', background:'none', outline:'none', fontSize:13, color:B[800], flex:1, fontFamily:'inherit' }} />
-          </div>
-          <select value={stageF} onChange={e=>setStageF(e.target.value)} style={{ padding:'8px 12px', border:`1px solid ${B[200]}`, background:B[0], fontSize:12, color:B[800], outline:'none', cursor:'pointer' }}>
-            <option value="all">Todos os estágios</option>
-            {STAGES.map(s=><option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
-          </select>
-          <div style={{ marginLeft:'auto' }}>
-            <button onClick={()=>nav?.addContact()} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Contato</button>
-          </div>
-        </div>
-        <div style={{ flex:1, overflowY:'auto' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-            <thead style={{ position:'sticky', top:0 }}>
-              <tr style={{ background:B[50] }}>
-                {['Contato','Empresa','Cidade','Estágio','Valor','Último contato','Ações'].map(h=>(<th key={h} style={{ padding:'11px 20px', textAlign:'left', fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.7, borderBottom:`1px solid ${B[150]}` }}>{h}</th>))}
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((c,i)=>(
-                <tr key={c.id} onClick={()=>setSelected(selected===c.id?null:c.id)} style={{ borderBottom:`1px solid ${B[100]}`, background:selected===c.id?B[50]:i%2?B[0]:'#fafbfd', cursor:'pointer' }}>
-                  <td style={{ padding:'12px 20px' }}><div style={{ display:'flex', gap:10, alignItems:'center' }}><Av lbl={c.av} sz={32} bg={B[800]} /><div><div style={{ fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:10, color:B[400] }}>{c.job_title}</div></div></div></td>
-                  <td style={{ padding:'12px 20px', color:B[700] }}>{c.company}</td>
-                  <td style={{ padding:'12px 20px', color:B[500] }}>{c.city}</td>
-                  <td style={{ padding:'12px 20px' }}><Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} /></td>
-                  <td style={{ padding:'12px 20px', fontWeight:700, color:B[800], fontVariantNumeric:'tabular-nums' }}>{c.pipeline_value>0?fmt(c.pipeline_value):'—'}</td>
-                  <td style={{ padding:'12px 20px', color:B[500] }}>{c.last_contact_at}</td>
-                  <td style={{ padding:'12px 20px' }}><div style={{ display:'flex', gap:5 }}><button onClick={()=>nav?.go('conversas')} style={{ padding:'5px 10px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Chat</button><button onClick={()=>nav?.order(c.id)} style={{ padding:'5px 10px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Orçar</button></div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {/* Detail panel */}
-      {sc && (
-        <div style={{ width:320, background:B[0], borderLeft:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', overflow:'hidden', flexShrink:0 }}>
-          <div style={{ background:B[800], padding:'20px 18px', display:'flex', gap:14, alignItems:'center' }}>
-            <Av lbl={sc.av} sz={48} bg={B[600]} />
-            <div><div style={{ fontSize:16, fontWeight:800, color:B[0] }}>{sc.name}</div><div style={{ fontSize:12, color:B[300] }}>{sc.job_title}</div><div style={{ fontSize:11, color:B[400] }}>{sc.company}</div></div>
-          </div>
-          <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-            {[['phone','Ligar',()=>window.open('tel:'+sc.phone)],['chat','Chat',()=>nav?.go('conversas')],['file','Orçar',()=>nav?.order(sc.id)]].map(([icon,lbl,fn])=>(<button key={lbl} onClick={fn} style={{ flex:1, padding:'12px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><Ic n={icon} s={18} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase' }}>{lbl}</span></button>))}
-          </div>
-          <div style={{ flex:1, overflowY:'auto' }}>
-            {[['phone','Telefone',sc.phone],['mail','E-mail',sc.email],['map','Cidade',`${sc.city} · ${sc.state}`],['funnel','Estágio',STAGE_LABEL[sc.stage]||sc.stage],['tag','Tags',sc.tags.join(', ')]].map(([icon,label,val])=>(<div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:`1px solid ${B[100]}` }}><Ic n={icon} s={16} c={B[400]} /><div><div style={{ fontSize:10, color:B[400], marginBottom:1 }}>{label}</div><div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{val||'—'}</div></div></div>))}
-            {sc.pipeline_value>0 && <div style={{ padding:'14px 16px', borderBottom:`1px solid ${B[100]}` }}><div style={{ fontSize:10, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>Pipeline</div><div style={{ fontSize:22, fontWeight:900, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(sc.pipeline_value)}</div></div>}
-            {sc.notes && <div style={{ padding:'14px 16px' }}><div style={{ fontSize:10, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Notas</div><div style={{ fontSize:12, color:B[700], lineHeight:1.6, background:B[50], padding:'10px 12px', borderLeft:`3px solid ${B[800]}` }}>{sc.notes}</div></div>}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DesktopFunil({ data }) {
-  return (
-    <div style={{ padding:28 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:1, background:B[200], marginBottom:20 }}>
-        {STAGES.map((stage,i)=>{
-          const cs=data.contacts.filter(c=>c.stage===stage)
-          const total=cs.reduce((a,c)=>a+c.pipeline_value,0)
-          const op=1-i*.1
-          return (
-            <div key={stage} style={{ background:B[0] }}>
-              <div style={{ background:`rgba(38,59,126,${op+.2})`, padding:'10px 14px', display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:10, fontWeight:800, color:B[0], textTransform:'uppercase', letterSpacing:.6 }}>{STAGE_LABEL[stage]}</span>
-                <span style={{ fontSize:10, fontWeight:800, background:'rgba(255,255,255,0.2)', color:B[0], padding:'1px 7px' }}>{cs.length}</span>
-              </div>
-              {total>0&&<div style={{ padding:'6px 14px', background:B[50], borderBottom:`1px solid ${B[150]}`, fontSize:11, fontWeight:700, color:B[600], fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</div>}
-              <div style={{ padding:8, display:'flex', flexDirection:'column', gap:6, minHeight:200 }}>
-                {cs.map(c=>(
-                  <div key={c.id} style={{ background:B[50], border:`1px solid ${B[200]}`, padding:'10px 12px' }}>
-                    <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}><Av lbl={c.av} sz={26} bg={B[700]} /><div><div style={{ fontSize:11, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:10, color:B[500] }}>{c.city}</div></div></div>
-                    {c.pipeline_value>0&&<div style={{ fontSize:12, fontWeight:800, color:B[700], marginBottom:6, fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}
-                    <div style={{ display:'flex', gap:4 }}><button onClick={()=>nav?.go('conversas')} style={{ flex:1, padding:'4px', background:B[800], color:B[0], border:'none', fontSize:9, fontWeight:800, cursor:'pointer' }}>Chat</button><button onClick={()=>nav?.order(c.id)} style={{ flex:1, padding:'4px', background:B[100], color:B[700], border:`1px solid ${B[200]}`, fontSize:9, fontWeight:700, cursor:'pointer' }}>Orçar</button></div>
-                  </div>
+          <div style={{ flex: 1, padding: 14, overflow: "auto" }}>
+            <div style={{ background: C.surface, borderRadius: 10, padding: 14, marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>📢 Criar Anúncio</div>
+              <p style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6, margin: "0 0 12px" }}>Envie promoções personalizadas com base no histórico deste cliente.</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {["Oferta relâmpago", "Novidade no catálogo", "Promoção de volume", "Lançamento de produto"].map((type) => (
+                  <button key={type} style={{ padding: "10px 13px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, textAlign: "left", fontSize: 12, color: C.text, cursor: "pointer", fontWeight: 500 }}>
+                    {type} →
+                  </button>
                 ))}
               </div>
             </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function DesktopMetas({ data }) {
-  const s = data.stats
-  return (
-    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
-      <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'24px 28px', display:'flex', gap:40, alignItems:'center', flexWrap:'wrap' }}>
-        <div><div style={{ fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.7, marginBottom:4 }}>Meta Junho 2025</div><div style={{ fontSize:32, fontWeight:900, color:B[800], letterSpacing:-1 }}>{fmt(s.target)}</div></div>
-        <div style={{ flex:1, minWidth:200 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}><span style={{ fontSize:12, color:B[700] }}>Realizado: <strong>{fmt(s.salesMonth)}</strong></span><span style={{ fontSize:15, fontWeight:800, color:B[500] }}>{s.attainment}%</span></div>
-          <div style={{ background:B[100], height:12 }}><div style={{ width:`${s.attainment}%`, height:12, background:B[500] }} /></div>
-          <div style={{ fontSize:11, color:B[500], marginTop:6 }}>Faltam {fmt(s.target-s.salesMonth)}</div>
-        </div>
-        <div style={{ display:'flex', gap:24 }}>
-          {[['Visitas','21','25'],['Propostas','14','20'],['Fechamentos','18','22'],['Novos clientes','3','5']].map(([l,v,m])=>(
-            <div key={l} style={{ textAlign:'center' }}><div style={{ fontSize:10, color:B[600], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>{l}</div><div style={{ fontSize:22, fontWeight:800, color:B[800] }}>{v}<span style={{ fontSize:12, color:B[400] }}>/{m}</span></div><div style={{ background:B[100], height:4, marginTop:4 }}><div style={{ width:`${pct(+v,+m)}%`, height:4, background:B[500] }} /></div></div>
-          ))}
-        </div>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, background:B[200] }}>
-        <KpiCard label="Conversão"    value={`${s.conversionRate}%`} sub="+6pp vs maio" icon="trend"  accent delta="+6pp" />
-        <KpiCard label="Ticket médio" value={`R$${(s.avgTicket/1000).toFixed(0)}k`} sub="pedidos em jun" icon="dollar" accent delta="+12%" />
-        <KpiCard label="Pipeline"     value={fmt(s.pipeline)} sub="em negociação" icon="funnel" accent />
-        <KpiCard label="NPS"          value="82" sub="Excelente" icon="target" accent delta="+4pp" />
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-        <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'18px 18px 10px' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:B[800], marginBottom:12 }}>Vendas esta semana</div>
-          <ResponsiveContainer width="100%" height={180}><AreaChart data={data.weekData}><defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={B[800]} stopOpacity={0.15}/><stop offset="95%" stopColor={B[800]} stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="2 4" stroke={B[150]} /><XAxis dataKey="d" tick={{ fontSize:11, fill:B[400] }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize:10, fill:B[400] }} axisLine={false} tickLine={false} tickFormatter={v=>`${v/1000}k`} /><Tooltip formatter={v=>fmt(v)} contentStyle={{ border:`1px solid ${B[200]}`, borderRadius:0, fontSize:12 }} /><Area type="monotone" dataKey="v" stroke={B[800]} strokeWidth={2} fill="url(#wg)" name="Vendas" dot={{ fill:B[800], r:3, strokeWidth:0 }} /></AreaChart></ResponsiveContainer>
-        </div>
-        <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'18px 0 0' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:B[800], padding:'0 18px', marginBottom:12 }}>Ranking da Equipe</div>
-          {[['Ana Souza',71000],['Patrícia M.',63000],['Carlos Souza',55000,true],['Rui Costa',48000],['Lucas B.',39000]].map(([name,total,me],i)=>(
-            <div key={name} style={{ padding:'11px 18px', borderBottom:`1px solid ${B[100]}`, background:me?B[50]:B[0], display:'flex', gap:10, alignItems:'center' }}>
-              <span style={{ fontSize:11, fontWeight:800, color:i<3?B[500]:B[400], minWidth:18 }}>{i+1}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}><span style={{ fontSize:12, fontWeight:me?700:500, color:me?B[800]:B[700] }}>{name}{me?' (você)':''}</span><span style={{ fontSize:12, fontWeight:700, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</span></div>
-                <div style={{ background:B[100], height:4 }}><div style={{ width:`${pct(total,71000)}%`, height:4, background:[B[900],B[800],B[700],B[500],B[300]][i] }} /></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DesktopGestao({ data }) {
-  const s = data.stats
-  const convData = [{m:'Jan',t:28},{m:'Fev',t:35},{m:'Mar',t:30},{m:'Abr',t:38},{m:'Mai',t:42},{m:'Jun',t:34}]
-  return (
-    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:1, background:B[200] }}>
-        <KpiCard label="Pipeline"     value={fmt(s.pipeline)}          sub="6 oportunidades"    icon="funnel" accent />
-        <KpiCard label="Ticket médio" value={`R$${(s.avgTicket/1000).toFixed(0)}k`} sub="pedidos em jun" icon="dollar" accent />
-        <KpiCard label="Conversão"    value={`${s.conversionRate}%`}   sub="propostas fechadas" icon="trend"  accent />
-        <KpiCard label="Ciclo venda"  value="18 dias"                  sub="média fechamento"   icon="cal"    accent />
-        <KpiCard label="Clientes"     value={s.contactsTotal}          sub="3 prospects"        icon="users"  accent />
-        <KpiCard label="Orçamentos"   value={s.openQuotes}             sub={fmt(s.openQuotesValue)} icon="file" accent />
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr', gap:20 }}>
-        <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'18px 18px 10px' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:B[800], marginBottom:12 }}>Taxa de Conversão Mensal (%)</div>
-          <ResponsiveContainer width="100%" height={200}><LineChart data={convData}><CartesianGrid strokeDasharray="2 4" stroke={B[150]} /><XAxis dataKey="m" tick={{ fontSize:11, fill:B[400] }} axisLine={false} tickLine={false} /><YAxis domain={[20,50]} tick={{ fontSize:10, fill:B[400] }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`} /><Tooltip formatter={v=>`${v}%`} contentStyle={{ border:`1px solid ${B[200]}`, borderRadius:0, fontSize:12 }} /><Line type="monotone" dataKey="t" stroke={B[800]} strokeWidth={2.5} dot={{ fill:B[800], r:4, strokeWidth:0 }} name="Conversão" /></LineChart></ResponsiveContainer>
-        </div>
-        <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'18px' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:B[800], marginBottom:14 }}>Funil de Vendas</div>
-          {STAGES.map((s,i)=>{
-            const n=data.contacts.filter(c=>c.stage===s).length
-            const w=[100,78,58,40,25][i]
-            return (
-              <div key={s} style={{ marginBottom:10 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:B[600], marginBottom:4 }}><span style={{ textTransform:'uppercase', fontWeight:700, letterSpacing:.4 }}>{STAGE_LABEL[s]}</span><span style={{ fontWeight:800, color:B[800] }}>{n}</span></div>
-                <div style={{ background:B[100], height:22, position:'relative' }}>
-                  <div style={{ position:'absolute', left:0, top:0, height:'100%', width:`${w}%`, background:`rgba(38,59,126,${1-i*.12})`, display:'flex', alignItems:'center', paddingLeft:8 }}>
-                    <span style={{ fontSize:9, color:B[0], fontWeight:700 }}>{w}%</span>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      {/* Orders table */}
-      <div style={{ background:B[0], border:`1px solid ${B[150]}` }}>
-        <div style={{ padding:'14px 20px', borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Pedidos Recentes</div>
-          <button onClick={()=>nav?.order()} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={12} c={B[0]} /> Novo</button>
-        </div>
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-          <thead><tr style={{ background:B[50] }}>{['Número','Cliente','Valor','Pagamento','Origem','Status','Data'].map(h=>(<th key={h} style={{ padding:'10px 20px', textAlign:'left', fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.7, borderBottom:`1px solid ${B[150]}` }}>{h}</th>))}</tr></thead>
-          <tbody>{data.orders.map((o,i)=>(<tr key={o.id} style={{ borderBottom:`1px solid ${B[100]}`, background:i%2?B[50]:B[0] }}><td style={{ padding:'12px 20px', fontWeight:800, color:B[600], fontFamily:'monospace' }}>{o.number}</td><td style={{ padding:'12px 20px', color:B[800] }}>{o.contact_name}</td><td style={{ padding:'12px 20px', fontWeight:800, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(o.total)}</td><td style={{ padding:'12px 20px', color:B[600] }}>{o.payment_terms}</td><td style={{ padding:'12px 20px' }}><span style={{ fontSize:9, fontWeight:900, padding:'3px 7px', background:o.origin==='erp'?B[800]:B[150], color:o.origin==='erp'?B[0]:B[700], textTransform:'uppercase', letterSpacing:.5 }}>{o.origin==='erp'?'ERP':'Plataforma'}</span></td><td style={{ padding:'12px 20px' }}><Tag label={STATUS_LABEL[o.status]||o.status} variant={o.status==='delivered'||o.status==='confirmed'?'success':o.status==='cancelled'?'urgente':'default'} /></td><td style={{ padding:'12px 20px', color:B[500] }}>{o.created_at}</td></tr>))}</tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-function DesktopErp({ data }) {
-  return (
-    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
-      <div style={{ background:B[0], border:`1px solid ${B[150]}`, borderTop:`3px solid ${B[800]}`, padding:'24px 28px' }}>
-        <div style={{ fontSize:15, fontWeight:800, color:B[800], marginBottom:4 }}>Integração ERP</div>
-        <div style={{ fontSize:13, color:B[500] }}>Endpoint webhook configurado · Supabase Edge Function ativa</div>
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1, background:B[200] }}>
-        <KpiCard label="Pedidos via ERP"      value={data.orders.filter(o=>o.origin==='erp').length}      sub="sincronizados"  icon="erp"   accent />
-        <KpiCard label="Pedidos via plataforma" value={data.orders.filter(o=>o.origin!=='erp').length}     sub="criados no app" icon="cart"  accent />
-        <KpiCard label="Última sincronização"  value="há 2min"  sub="Automático"     icon="check" accent />
-      </div>
-      <div style={{ background:B[0], border:`1px solid ${B[150]}` }}>
-        <div style={{ padding:'14px 20px', borderBottom:`1px solid ${B[150]}`, fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Configuração</div>
-        <div style={{ padding:20, display:'flex', flexDirection:'column', gap:16 }}>
-          {[['Webhook URL','https://xinferxiukuxobjnrasp.supabase.co/functions/v1/erp-webhook'],['Método','POST'],['Header de autenticação','x-erp-secret: {seu-secret}'],['Eventos suportados','order.confirmed · order.delivered · quote.approved · stock.updated']].map(([label,val])=>(
-            <div key={label}><div style={{ fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.7, marginBottom:6 }}>{label}</div><div style={{ background:B[50], border:`1px solid ${B[200]}`, padding:'10px 14px', fontSize:12, color:B[800], fontFamily:'monospace', wordBreak:'break-all' }}>{val}</div></div>
-          ))}
-        </div>
-      </div>
-      <div style={{ background:B[0], border:`1px solid ${B[150]}` }}>
-        <div style={{ padding:'14px 20px', borderBottom:`1px solid ${B[150]}`, fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Log de Sincronização</div>
-        {data.orders.map((o,i)=>(
-          <div key={o.id} style={{ padding:'11px 20px', borderBottom:`1px solid ${B[100]}`, display:'flex', gap:16, alignItems:'center' }}>
-            <span style={{ fontSize:9, fontWeight:900, padding:'3px 7px', background:o.origin==='erp'?B[800]:B[150], color:o.origin==='erp'?B[0]:B[700] }}>{o.origin==='erp'?'ERP':'Plataforma'}</span>
-            <span style={{ fontSize:12, fontWeight:700, color:B[600], fontFamily:'monospace' }}>{o.number}</span>
-            <span style={{ fontSize:12, color:B[700] }}>{o.contact_name}</span>
-            <span style={{ fontSize:12, fontWeight:700, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(o.total)}</span>
-            <span style={{ marginLeft:'auto', fontSize:11, color:B[400] }}>{o.created_at}</span>
-            <Tag label={STATUS_LABEL[o.status]||o.status} variant={o.status==='confirmed'||o.status==='delivered'?'success':'default'} />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-
-// ═══════════════════════════════════════════════
-// MOCK DATA — Marketing & Agenda
-// ═══════════════════════════════════════════════
-const AGENDA_MOCK = [
-  { id:'a1', contact:'Metalúrgica Pinheiro', date:'Hoje',    time:'14h00', type:'Presencial', status:'confirmado', origin:'platform', av:'RP' },
-  { id:'a2', contact:'Construtora Lima',     date:'Amanhã',  time:'10h00', type:'Videocall',  status:'confirmado', origin:'erp',      av:'PL' },
-  { id:'a3', contact:'EletroSul Comercial',  date:'Sex 27',  time:'09h00', type:'Presencial', status:'pendente',   origin:'platform', av:'LE' },
-  { id:'a4', contact:'AutoPeças Central',    date:'Sex 27',  time:'14h30', type:'Ligação',    status:'confirmado', origin:'erp',      av:'AC' },
-  { id:'a5', contact:'Ferragens Monteiro',   date:'Seg 30',  time:'11h00', type:'Presencial', status:'pendente',   origin:'platform', av:'JM' },
-  { id:'a6', contact:'Distribuidora Alves',  date:'Ter 01',  time:'16h00', type:'Videocall',  status:'confirmado', origin:'erp',      av:'CA' },
-]
-const ANUNCIOS_MOCK = [
-  { id:'an1', title:'Promoção Válvulas V200', type:'Oferta relâmpago',  status:'ativo',    enviado:42, aberto:31, resposta:12, texto:'Aproveite! Válvula V200 com 12% de desconto até 30/06. Peça já o seu orçamento.' },
-  { id:'an2', title:'Kit Hidráulico Completo', type:'Lançamento',       status:'rascunho', enviado:0,  aberto:0,  resposta:0,  texto:'Novo combo hidráulico disponível! Mangueira + conectores com economia de R$67.' },
-  { id:'an3', title:'Recorrência Rolamentos', type:'Recorrência',       status:'pausado',  enviado:18, aberto:14, resposta:5,  texto:'Sua próxima compra de rolamentos está chegando! Estoque garantido para você.' },
-]
-const CAMPANHAS_MOCK = [
-  { id:'cp1', name:'Clientes VIP — Junho',    status:'ativo',    alvos:8,  enviados:8,  abertos:7,  respostas:4, inicio:'01/06' },
-  { id:'cp2', name:'Recuperação Prospects',   status:'ativo',    alvos:12, enviados:5,  abertos:3,  respostas:1, inicio:'15/06' },
-  { id:'cp3', name:'Lançamento Kit Hidráulico',status:'rascunho',alvos:20, enviados:0,  abertos:0,  respostas:0, inicio:'—'     },
-]
-const CADENCIA_MOCK = [
-  { id:'cd1', name:'Onboarding Cliente Novo',  steps:5, ativos:3, taxa:68, passos:[
-    { dia:0,  acao:'WhatsApp: Boas-vindas e apresentação', status:'done'    },
-    { dia:2,  acao:'WhatsApp: Envio do catálogo',          status:'done'    },
-    { dia:5,  acao:'Ligação: Follow-up catálogo',          status:'pending' },
-    { dia:10, acao:'WhatsApp: Oferta personalizada',       status:'pending' },
-    { dia:15, acao:'Visita presencial',                    status:'pending' },
-  ]},
-  { id:'cd2', name:'Reativação de Inativos', steps:3, ativos:7, taxa:42, passos:[
-    { dia:0,  acao:'WhatsApp: Sentimos sua falta!',        status:'done'    },
-    { dia:3,  acao:'WhatsApp: Oferta exclusiva',           status:'pending' },
-    { dia:7,  acao:'Ligação: Atendimento personalizado',   status:'pending' },
-  ]},
-]
-
-
-// ═══ OrderModal — shared by FAB + DesktopApp ═══════════════════
-function OrderModal({ data, open, onClose, initialClientId=null }) {
-  const [step, setStep]         = React.useState('client')
-  const [clientId, setClientId] = React.useState(null)
-  const [search, setSearch]     = React.useState('')
-  const wasOpen = React.useRef(false)
-  if (open && !wasOpen.current) {
-    wasOpen.current = true
-    Promise.resolve().then(()=>{ setStep(initialClientId?'order':'client'); setClientId(initialClientId||null); setSearch('') })
-  }
-  if (!open) wasOpen.current = false
-  if (!open) return null
-  const client   = data.contacts.find(c=>c.id===clientId)
-  const filtered = data.contacts.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.company.toLowerCase().includes(search.toLowerCase()))
-  return (
-    <>
-      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.5)', zIndex:300, backdropFilter:'blur(2px)' }} />
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:301, background:B[0], borderRadius:'14px 14px 0 0', maxHeight:'88vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 40px rgba(15,20,50,0.15)' }}>
-        <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}><div style={{ width:40, height:4, background:B[200] }} /></div>
-        <div style={{ padding:'10px 18px 12px', borderBottom:`1px solid ${B[150]}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            {step==='order' && <button onClick={()=>{ setStep('client'); setClientId(null) }} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:'4px 6px 4px 0' }}><Ic n="back" s={20} c={B[800]} /></button>}
-            <div>
-              <div style={{ fontSize:14, fontWeight:800, color:B[800] }}>{step==='client'?'Tirar Pedido':`Pedido — ${client?.name?.split(' ')[0]}`}</div>
-              {step==='order' && <div style={{ fontSize:11, color:B[500] }}>{client?.company}</div>}
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background:B[100], border:'none', cursor:'pointer', display:'flex', padding:8 }}><Ic n="x" s={16} c={B[600]} /></button>
-        </div>
-        {step==='client' && (
-          <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <div style={{ padding:'10px 16px', borderBottom:`1px solid ${B[150]}` }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'9px 12px' }}>
-                <Ic n="search" s={15} c={B[400]} />
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." autoFocus style={{ border:'none', background:'none', outline:'none', fontSize:14, color:B[800], flex:1, fontFamily:'inherit' }} />
-              </div>
-            </div>
-            <div style={{ flex:1, overflowY:'auto' }}>
-              {filtered.map(c=>(
-                <div key={c.id} onClick={()=>{ setClientId(c.id); setStep('order') }} style={{ display:'flex', gap:12, padding:'13px 16px', borderBottom:`1px solid ${B[100]}`, cursor:'pointer', alignItems:'center' }}>
-                  <Av lbl={c.av} sz={40} bg={B[800]} />
-                  <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:12, color:B[500] }}>{c.company} · {c.city}</div></div>
-                  <Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {step==='order' && client && (
-          <div style={{ flex:1, overflow:'hidden' }}>
-            <OrderPanel contact={client} products={data.products} promotions={data.promotions} combos={data.combos} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={async (...args)=>{ await data.createOrder(...args); onClose() }} />
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
-
-// ═══ AddContactModal ════════════════════════════════════════════
-function AddContactModal({ data, onClose }) {
-  const [form, setForm] = React.useState({ name:'', company:'', phone:'', email:'', city:'', job_title:'' })
-  const set = (k,v) => setForm(f=>({...f,[k]:v}))
-  const save = () => { if (!form.name.trim()) return; data.addContact(form); onClose() }
-  return (
-    <>
-      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.5)', zIndex:300, backdropFilter:'blur(2px)' }} />
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:301, background:B[0], borderRadius:'14px 14px 0 0', maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
-        <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}><div style={{ width:40, height:4, background:B[200] }} /></div>
-        <div style={{ padding:'12px 20px 14px', borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontSize:15, fontWeight:800, color:B[800] }}>Novo Contato</div>
-          <button onClick={onClose} style={{ background:B[100], border:'none', cursor:'pointer', display:'flex', padding:8 }}><Ic n="x" s={16} c={B[600]} /></button>
-        </div>
-        <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-          {[['name','Nome completo *'],['company','Empresa'],['job_title','Cargo'],['phone','Telefone / WhatsApp'],['email','E-mail'],['city','Cidade']].map(([k,lbl])=>(
-            <div key={k}>
-              <div style={{ fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>{lbl}</div>
-              <input value={form[k]} onChange={e=>set(k,e.target.value)} style={{ width:'100%', padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit', boxSizing:'border-box' }} />
-            </div>
-          ))}
-        </div>
-        <div style={{ padding:'12px 20px 20px', borderTop:`1px solid ${B[150]}`, display:'flex', gap:8 }}>
-          <button onClick={onClose} style={{ flex:1, padding:'12px', background:B[50], color:B[600], border:`1px solid ${B[200]}`, fontSize:13, fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={save} style={{ flex:2, padding:'12px', background:B[800], color:B[0], border:'none', fontSize:13, fontWeight:800, cursor:'pointer' }}>Salvar Contato</button>
-        </div>
-      </div>
-    </>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// FAB — Floating Action Button (tirar pedido rápido)
-// ═══════════════════════════════════════════════
-function FAB({ data, visible=true }) {
-  const [open, setOpen] = useState(false)
-  if (!visible) return null
-  return (
-    <>
-      <button onClick={()=>setOpen(true)} style={{ position:'fixed', bottom:80, right:18, width:56, height:56, background:B[800], color:B[0], border:'none', borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 20px rgba(38,59,126,0.45)', zIndex:100 }}>
-        <Ic n="cart" s={24} c={B[0]} />
-      </button>
-      <OrderModal data={data} open={open} onClose={()=>setOpen(false)} />
-    </>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// PRODUTOS ERP
-
-// ═══════════════════════════════════════════════
-// PRODUTOS ERP — visualização integrada
-// ═══════════════════════════════════════════════
-function ProdutosERP({ data }) {
-  const [search, setSearch]   = useState('')
-  const [cat, setCat]         = useState('Todos')
-  const [selected, setSelected] = useState(null)
-  const cats = ['Todos', ...[...new Set(data.products.map(p=>p.category))]]
-  const list  = data.products.filter(p=>
-    (cat==='Todos'||p.category===cat) &&
-    (p.name.toLowerCase().includes(search.toLowerCase()) || p.ref?.toLowerCase().includes(search.toLowerCase()))
-  )
-  const sp = data.products.find(p=>p.id===selected)
-
-  return (
-    <div style={{ display:'flex', height:'100%' }}>
-      {/* Catalog */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {/* Toolbar */}
-        <div style={{ padding:'14px 20px', borderBottom:`1px solid ${B[150]}`, background:B[0], display:'flex', gap:10, alignItems:'center' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'8px 12px', flex:1, maxWidth:300 }}>
-            <Ic n="search" s={14} c={B[400]} />
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar produto ou ref..." style={{ border:'none', background:'none', outline:'none', fontSize:13, color:B[800], flex:1, fontFamily:'inherit' }} />
-          </div>
-          <div style={{ display:'flex', gap:1, background:B[200] }}>
-            {cats.map(c=>(
-              <button key={c} onClick={()=>setCat(c)} style={{ padding:'8px 14px', background:cat===c?B[800]:B[0], color:cat===c?B[0]:B[600], border:'none', cursor:'pointer', fontSize:11, fontWeight:700, whiteSpace:'nowrap' }}>{c}</button>
-            ))}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:B[500], marginLeft:'auto', background:B[50], border:`1px solid ${B[200]}`, padding:'7px 12px' }}>
-            <Ic n="erp" s={14} c={B[400]} /> ERP · Sincronizado há 2min
-          </div>
-        </div>
-        {/* Table */}
-        <div style={{ flex:1, overflowY:'auto' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-            <thead style={{ position:'sticky', top:0 }}>
-              <tr style={{ background:B[50] }}>
-                {['Ref','Produto','Categoria','Preço','Estoque','Mín.','Status'].map(h=>(
-                  <th key={h} style={{ padding:'10px 20px', textAlign:'left', fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.7, borderBottom:`1px solid ${B[150]}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((p,i)=>{
-                const lowStock = p.stock < 20
-                return (
-                  <tr key={p.id} onClick={()=>setSelected(selected===p.id?null:p.id)} style={{ borderBottom:`1px solid ${B[100]}`, background:selected===p.id?B[50]:i%2?B[0]:'#fafbfd', cursor:'pointer' }}>
-                    <td style={{ padding:'12px 20px', fontFamily:'monospace', fontWeight:700, color:B[600] }}>{p.ref}</td>
-                    <td style={{ padding:'12px 20px', fontWeight:600, color:B[800] }}>{p.name}</td>
-                    <td style={{ padding:'12px 20px', color:B[500] }}>{p.category}</td>
-                    <td style={{ padding:'12px 20px', fontWeight:800, color:B[800], fontVariantNumeric:'tabular-nums' }}>{fmt(p.price)}<span style={{ fontSize:10, color:B[400], fontWeight:400 }}>/{p.unit}</span></td>
-                    <td style={{ padding:'12px 20px' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <div style={{ width:60, background:B[100], height:4 }}>
-                          <div style={{ width:`${Math.min(p.stock/300*100,100)}%`, height:4, background:lowStock?'#f59e0b':B[600] }} />
-                        </div>
-                        <span style={{ fontWeight:700, color:lowStock?'#b45309':B[800] }}>{p.stock}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding:'12px 20px', color:B[500] }}>20</td>
-                    <td style={{ padding:'12px 20px' }}>
-                      {lowStock
-                        ? <span style={{ fontSize:9, fontWeight:800, padding:'3px 8px', background:'#fef3c7', color:'#b45309', textTransform:'uppercase' }}>Estoque baixo</span>
-                        : <span style={{ fontSize:9, fontWeight:800, padding:'3px 8px', background:B[150], color:B[700], textTransform:'uppercase' }}>OK</span>
-                      }
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        {/* Footer stats */}
-        <div style={{ padding:'10px 20px', borderTop:`1px solid ${B[150]}`, background:B[50], display:'flex', gap:24, fontSize:11, color:B[500] }}>
-          <span>{list.length} produtos</span>
-          <span style={{ color:'#b45309' }}>⚠ {list.filter(p=>p.stock<20).length} com estoque baixo</span>
-          <span style={{ marginLeft:'auto' }}>Valor total: <strong style={{ color:B[800] }}>{fmt(list.reduce((a,p)=>a+p.price*p.stock,0))}</strong></span>
-        </div>
-      </div>
-
-      {/* Detail */}
-      {sp && (
-        <div style={{ width:300, background:B[0], borderLeft:`1px solid ${B[150]}`, display:'flex', flexDirection:'column', flexShrink:0 }}>
-          <div style={{ background:B[800], padding:'20px 18px' }}>
-            <div style={{ fontSize:10, color:B[300], fontFamily:'monospace', marginBottom:4 }}>{sp.ref}</div>
-            <div style={{ fontSize:16, fontWeight:800, color:B[0], marginBottom:4 }}>{sp.name}</div>
-            <div style={{ fontSize:12, color:B[300] }}>{sp.category}</div>
-          </div>
-          <div style={{ flex:1, overflowY:'auto' }}>
-            {[
-              ['Preço unitário', fmt(sp.price)+'/'+sp.unit],
-              ['Estoque atual',  `${sp.stock} ${sp.unit}`],
-              ['Estoque mínimo', `20 ${sp.unit}`],
-              ['Categoria',      sp.category],
-              ['Origem',         'ERP integrado'],
-              ['Última sync',    'há 2 minutos'],
-            ].map(([l,v])=>(
-              <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'12px 18px', borderBottom:`1px solid ${B[100]}` }}>
-                <span style={{ fontSize:11, color:B[500] }}>{l}</span>
-                <span style={{ fontSize:12, fontWeight:700, color:B[800] }}>{v}</span>
-              </div>
-            ))}
-            <div style={{ padding:'14px 18px' }}>
-              <div style={{ fontSize:10, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Estoque</div>
-              <div style={{ background:B[100], height:8, marginBottom:6 }}>
-                <div style={{ width:`${Math.min(sp.stock/300*100,100)}%`, height:8, background:sp.stock<20?'#f59e0b':B[600] }} />
-              </div>
-              <div style={{ fontSize:11, color:sp.stock<20?'#b45309':B[600] }}>
-                {sp.stock<20?`⚠ Estoque baixo — ${sp.stock} restantes`:`${sp.stock} em estoque`}
-              </div>
-            </div>
-            <div style={{ padding:'14px 18px', borderTop:`1px solid ${B[150]}` }}>
-              <button style={{ width:'100%', padding:'11px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                <Ic n="cart" s={14} c={B[0]} /> Incluir em pedido
+            <div style={{ background: C.goldBg, border: `1px solid ${C.gold}40`, borderRadius: 10, padding: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.gold, marginBottom: 7 }}>⭐ Sugestão IA</div>
+              <p style={{ fontSize: 11.5, color: C.text, lineHeight: 1.55, margin: "0 0 10px" }}>
+                Com base no histórico, este cliente compra <strong>Cabo PP</strong> trimestralmente. Momento ideal para oferta de recorrência.
+              </p>
+              <button style={{ padding: "8px 14px", background: C.gold, color: "#fff", border: "none", borderRadius: 8, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+                Criar oferta personalizada
               </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// ROOT
-// ═══════════════════════════════════════════════
-export default function App() {
-  const isMobile           = useIsMobile()
-  const { session, loading, profile, signIn, signUp, signOut } = useAuth()
-  const [demo, setDemo]    = useState(false)
-  const authenticated      = session || demo
-  const userId             = session?.user?.id || null
-  const data               = useAppData(authenticated ? userId : null)
-  const user               = authenticated ? (profile || MOCK.profile) : null
-
-  if (loading) return (
-    <div style={{ height:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:B[50] }}>
-      <div style={{ textAlign:'center' }}>
-        <img src="/logo.svg" alt="" style={{ height:40, marginBottom:16 }} onError={e=>{e.target.style.display='none'}} />
-        <div style={{ fontSize:12, color:B[500] }}>Carregando...</div>
+        )}
       </div>
     </div>
-  )
-
-  if (!authenticated) return (
-    <LoginScreen
-      onLogin={signIn}
-      onSignUp={signUp}
-      onDemo={() => setDemo(true)}
-    />
-  )
-
-  const handleLogout = () => { signOut(); setDemo(false) }
-
-  return isMobile
-    ? <MobileApp  data={data} user={user} onLogout={handleLogout} />
-    : <DesktopApp data={data} user={user} onLogout={handleLogout} />
+  );
 }
 
+// ── Analytics View ─────────────────────────────────────────────────────────────
+function AnalyticsView({ monthlyData, topProducts, funnelData }) {
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div style={{ background: C.card, borderRadius: 12, padding: 20, border: `1px solid ${C.border}` }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>Receita vs Meta</div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>Jan – Jun 2026 · em mil R$</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: C.muted }} />
+              <YAxis tick={{ fontSize: 11, fill: C.muted }} />
+              <Tooltip formatter={(v) => [`R$ ${v}k`, ""]} contentStyle={{ fontSize: 11, borderRadius: 8, border: `1px solid ${C.border}` }} />
+              <Line type="monotone" dataKey="receita" stroke={C.green} strokeWidth={2.5} dot={{ r: 4, fill: C.green }} name="Receita" />
+              <Line type="monotone" dataKey="meta" stroke={C.orange} strokeWidth={2} strokeDasharray="5 5" dot={false} name="Meta" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={{ background: C.card, borderRadius: 12, padding: 20, border: `1px solid ${C.border}` }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>Funil de Conversão</div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>Junho 2026</div>
+          {funnelData.map((f, i) => (
+            <div key={f.estagio} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                <span style={{ fontSize: 11, color: C.text }}>{f.estagio}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{f.qtd}</span>
+              </div>
+              <div style={{ height: 7, background: C.surface, borderRadius: 4 }}>
+                <div style={{ height: 7, background: f.color, borderRadius: 4, width: `${(f.qtd / 142) * 100}%` }} />
+              </div>
+              {i < funnelData.length - 1 && (
+                <div style={{ fontSize: 9, color: C.muted, textAlign: "right", marginTop: 1 }}>
+                  {Math.round((funnelData[i + 1].qtd / f.qtd) * 100)}% conversão
+                </div>
+              )}
+            </div>
+          ))}
+          <div style={{ marginTop: 12, padding: "9px", background: C.greenBg, borderRadius: 8, textAlign: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 900, color: C.greenDark }}>12,7%</span>
+            <span style={{ fontSize: 10.5, color: C.greenDark }}> taxa de fechamento</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: C.card, borderRadius: 12, padding: 20, border: `1px solid ${C.border}` }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>Top Produtos por Receita</div>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>em R$ mil · Junho 2026</div>
+        <ResponsiveContainer width="100%" height={190}>
+          <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 11, fill: C.muted }} />
+            <YAxis dataKey="produto" type="category" tick={{ fontSize: 11, fill: C.text }} width={120} />
+            <Tooltip formatter={(v) => [`R$ ${v}k`, "Receita"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+            <Bar dataKey="valor" fill={C.green} radius={[0, 5, 5, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// ── Orders View ────────────────────────────────────────────────────────────────
+function OrdersView() {
+  const orders = [
+    { id: "PED-4521", client: "Elétrica Horizonte", value: "R$ 17.980", date: "20/06", status: "Enviado ERP", items: 2 },
+    { id: "PED-4520", client: "TechBuild Engenharia", value: "R$ 8.450", date: "19/06", status: "Aguardando", items: 4 },
+    { id: "PED-4519", client: "Construções Moreira", value: "R$ 23.500", date: "18/06", status: "Faturado", items: 6 },
+    { id: "PED-4518", client: "Indústria Prata", value: "R$ 5.200", date: "17/06", status: "Entregue", items: 3 },
+    { id: "PED-4517", client: "Supermercado Bela Vista", value: "R$ 11.800", date: "16/06", status: "Faturado", items: 5 },
+  ];
+
+  const statusStyle = {
+    "Enviado ERP": { bg: "#EEF2FF", text: C.blue },
+    Aguardando: { bg: C.goldBg, text: C.gold },
+    Faturado: { bg: C.greenBg, text: C.greenDark },
+    Entregue: { bg: C.surface, text: C.muted },
+  };
+
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        <div style={{ padding: "15px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>Pedidos Recentes</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.surface, borderRadius: 8, padding: "6px 12px" }}>
+            <Search size={12} color={C.muted} />
+            <input placeholder="Buscar pedido..." style={{ border: "none", background: "transparent", fontSize: 12, outline: "none", width: 140, color: C.text }} />
+          </div>
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: C.surface }}>
+              {["Pedido", "Cliente", "Valor", "Data", "Itens", "Status"].map((h) => (
+                <th key={h} style={{ padding: "10px 20px", textAlign: "left", fontSize: 11, fontWeight: 600, color: C.muted }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o, i) => {
+              const st = statusStyle[o.status];
+              return (
+                <tr key={o.id} style={{ borderBottom: i < orders.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                  <td style={{ padding: "13px 20px", fontSize: 12, fontWeight: 700, color: C.blue }}>{o.id}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 12, color: C.text }}>{o.client}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 12, fontWeight: 700, color: C.text }}>{o.value}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 12, color: C.muted }}>{o.date}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 12, color: C.muted }}>{o.items} itens</td>
+                  <td style={{ padding: "13px 20px" }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4, background: st.bg, color: st.text }}>{o.status}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── WhatsApp Connect View ──────────────────────────────────────────────────────
+const EVO_URL = "https://evolution-api-production-4a43.up.railway.app";
+const EVO_INSTANCE = "crepresentante";
+
+function WhatsAppConnectView({ waStatus, setWaStatus }) {
+  const [qrCode, setQrCode] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [phone, setPhone] = useState("");
+  const [polling, setPolling] = useState(false);
+  const pollRef = useRef(null);
+
+  const apiKey = ["daaa5872da9aa49319a663b5752d3ff",
+    "ca0b2d4be5db0dac1832c21f7228fc1d2"].join("");
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(`${EVO_URL}/instance/connectionState/${EVO_INSTANCE}`, {
+        headers: { apikey: apiKey },
+      });
+      const data = await res.json();
+      const state = data?.instance?.state;
+      if (state === "open") {
+        setWaStatus("connected");
+        setQrCode(null);
+        setPolling(false);
+        clearInterval(pollRef.current);
+      } else if (state === "connecting" || state === "close") {
+        setWaStatus("connecting");
+      }
+      return state;
+    } catch {
+      return null;
+    }
+  };
+
+  const fetchQr = async () => {
+    setLoading(true);
+    setError(null);
+    setQrCode(null);
+    try {
+      // delete and recreate to force fresh QR
+      await fetch(`${EVO_URL}/instance/delete/${EVO_INSTANCE}`, {
+        method: "DELETE", headers: { apikey: apiKey },
+      });
+      const createRes = await fetch(`${EVO_URL}/instance/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: apiKey },
+        body: JSON.stringify({ instanceName: EVO_INSTANCE, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
+      });
+      const createData = await createRes.json();
+      if (createData?.qrcode?.base64) {
+        setQrCode(createData.qrcode.base64);
+        setWaStatus("connecting");
+        startPolling();
+      } else {
+        // try connect endpoint
+        const connRes = await fetch(`${EVO_URL}/instance/connect/${EVO_INSTANCE}`, {
+          headers: { apikey: apiKey },
+        });
+        const connData = await connRes.json();
+        if (connData?.base64) {
+          setQrCode(connData.base64);
+          setWaStatus("connecting");
+          startPolling();
+        } else {
+          setError("Não foi possível gerar o QR Code. Tente novamente.");
+        }
+      }
+    } catch (e) {
+      setError("Erro de conexão com a Evolution API.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startPolling = () => {
+    setPolling(true);
+    pollRef.current = setInterval(async () => {
+      const state = await checkStatus();
+      if (state === "open") clearInterval(pollRef.current);
+    }, 3000);
+  };
+
+  const disconnect = async () => {
+    clearInterval(pollRef.current);
+    try {
+      await fetch(`${EVO_URL}/instance/logout/${EVO_INSTANCE}`, {
+        method: "DELETE", headers: { apikey: apiKey },
+      });
+    } finally {
+      setWaStatus("disconnected");
+      setQrCode(null);
+      setPhone("");
+    }
+  };
+
+  useEffect(() => {
+    checkStatus();
+    return () => clearInterval(pollRef.current);
+  }, []);
+
+  const statusInfo = {
+    connected: { color: C.green, bg: C.greenBg, label: "Conectado", icon: Wifi },
+    connecting: { color: C.gold, bg: C.goldBg, label: "Aguardando QR Code...", icon: RefreshCw },
+    disconnected: { color: C.muted, bg: C.surface, label: "Desconectado", icon: WifiOff },
+  };
+  const si = statusInfo[waStatus];
+
+  return (
+    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>Conexão WhatsApp</div>
+        <div style={{ fontSize: 12, color: C.muted }}>Conecte seu número ao CRepresentante para sincronizar conversas em tempo real</div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {/* Left: QR / Status */}
+        <div style={{ background: C.card, borderRadius: 14, padding: 24, border: `1px solid ${C.border}` }}>
+          {/* Status pill */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, background: si.bg, borderRadius: 8, padding: "8px 14px", width: "fit-content" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: si.color }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: si.color }}>{si.label}</span>
+          </div>
+
+          {waStatus === "connected" ? (
+            <div style={{ textAlign: "center", padding: "30px 0" }}>
+              <div style={{ width: 72, height: 72, borderRadius: "50%", background: C.greenBg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <CheckCircle size={36} color={C.green} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 6 }}>WhatsApp Conectado!</div>
+              {phone && <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>{phone}</div>}
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 24, lineHeight: 1.6 }}>
+                Suas conversas estão sincronizadas em tempo real. Mensagens recebidas aparecem automaticamente na aba <strong>Conversas</strong>.
+              </div>
+              <button onClick={disconnect}
+                style={{ padding: "10px 20px", background: C.redBg, color: C.red, border: `1px solid ${C.red}30`, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                Desconectar WhatsApp
+              </button>
+            </div>
+          ) : qrCode ? (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 16 }}>Escaneie o QR Code com seu WhatsApp</div>
+              <div style={{ background: "#fff", borderRadius: 12, padding: 12, border: `2px solid ${C.green}30`, display: "inline-block", marginBottom: 16 }}>
+                <img
+                  src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                  alt="QR Code WhatsApp"
+                  style={{ width: 220, height: 220, display: "block" }}
+                />
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.7, marginBottom: 16 }}>
+                1. Abra o WhatsApp no celular<br />
+                2. Toque em <strong>Mais opções</strong> → <strong>Aparelhos conectados</strong><br />
+                3. Toque em <strong>Conectar um aparelho</strong><br />
+                4. Aponte a câmera para o QR Code acima
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                <button onClick={fetchQr} style={{ padding: "8px 14px", background: C.surface, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                  <RefreshCw size={12} /> Novo QR Code
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ width: 220, height: 220, background: C.surface, borderRadius: 12, border: `2px dashed ${C.border}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                <Smartphone size={40} color={C.border} style={{ marginBottom: 10 }} />
+                <div style={{ fontSize: 12, color: C.muted }}>QR Code aparece aqui</div>
+              </div>
+              {error && (
+                <div style={{ background: C.redBg, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: C.red, marginBottom: 16 }}>{error}</div>
+              )}
+              <button onClick={fetchQr} disabled={loading}
+                style={{ padding: "12px 24px", background: loading ? C.surface : C.green, color: loading ? C.muted : C.ink, border: "none", borderRadius: 9, fontSize: 13, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 8, margin: "0 auto" }}>
+                {loading ? <><RefreshCw size={14} /> Gerando QR Code...</> : <><Smartphone size={14} /> Conectar WhatsApp</>}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Info panels */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Como funciona */}
+          <div style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}` }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 14 }}>Como funciona</div>
+            {[
+              { n: "1", title: "Conecte seu número", desc: "Escaneie o QR Code com seu WhatsApp pessoal ou comercial" },
+              { n: "2", title: "Mensagens sincronizadas", desc: "Toda mensagem recebida aparece em tempo real na aba Conversas" },
+              { n: "3", title: "Responda direto na plataforma", desc: "Envie mensagens, orçamentos e pedidos sem sair do CRepresentante" },
+            ].map((s) => (
+              <div key={s.n} style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: C.ink, flexShrink: 0 }}>{s.n}</div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 2 }}>{s.title}</div>
+                  <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5 }}>{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Configurações da instância */}
+          <div style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 14 }}>
+              <Settings size={13} /> Configurações da Instância
+            </div>
+            {[
+              { label: "Instância", value: EVO_INSTANCE },
+              { label: "Servidor", value: "Railway · US West" },
+              { label: "Versão", value: "Evolution API 2.3.7" },
+              { label: "Webhook", value: "Não configurado" },
+            ].map((r) => (
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 11, color: C.muted }}>{r.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
