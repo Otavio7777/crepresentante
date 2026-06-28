@@ -274,7 +274,7 @@ function OrderPanel({ contact, products, promotions, combos, paymentTerms, deliv
         {!search && promotions.length>0 && (
           <div style={{ padding:'10px 0 4px' }}>
             <div style={{ padding:'0 12px', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}><Ic n="zap" s={13} c={B[800]} /><span style={{ fontSize:10, fontWeight:800, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Promoções</span></div>
-            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', padding:'0 12px 10px' }}>
+            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'thin', scrollbarColor:`${B[200]} transparent`, padding:'0 12px 12px' }}>
               {promotions.map(pr=>(
                 <div key={pr.id} style={{ flexShrink:0, width:200, background:B[800], padding:'12px', position:'relative' }}>
                   <div style={{ position:'absolute', top:0, right:0, background:B[500], padding:'4px 8px', fontSize:9, fontWeight:900, color:B[0] }}>{pr.badge}</div>
@@ -290,7 +290,7 @@ function OrderPanel({ contact, products, promotions, combos, paymentTerms, deliv
         {!search && combos.length>0 && (
           <div style={{ padding:'4px 0 6px' }}>
             <div style={{ padding:'0 12px', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}><Ic n="tag" s={13} c={B[800]} /><span style={{ fontSize:10, fontWeight:800, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Combos</span></div>
-            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'none', padding:'0 12px 10px' }}>
+            <div style={{ display:'flex', gap:8, overflowX:'auto', scrollbarWidth:'thin', scrollbarColor:`${B[200]} transparent`, padding:'0 12px 12px' }}>
               {combos.map(cb=>(
                 <div key={cb.id} style={{ flexShrink:0, width:170, background:B[0], border:`1px solid ${B[200]}`, borderTop:`3px solid ${B[800]}`, padding:'10px' }}>
                   <div style={{ fontSize:9, fontWeight:800, color:B[500], textTransform:'uppercase', marginBottom:3 }}>{cb.tag}</div>
@@ -1260,7 +1260,7 @@ function DesktopApp({ data, user, onLogout }) {
         </div>
         <nav style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
           {NAV.map((item,i)=>item.section
-            ? (!collapsed && <div key={i} style={{ padding:'12px 16px 4px', fontSize:9, fontWeight:800, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:1.2 }}>{item.section}</div>)
+            ? (!collapsed && <div key={i} style={{ padding:'10px 16px 2px', fontSize:10, fontWeight:500, color:'rgba(255,255,255,0.28)', letterSpacing:.2 }}>{item.section}</div>)
             : <button key={item.id} onClick={()=>setTab(item.id)} title={collapsed?item.label:undefined} style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:collapsed?'11px 0':'11px 16px', justifyContent:collapsed?'center':'flex-start', background:tab===item.id?'rgba(255,255,255,0.1)':'none', borderLeft:`3px solid ${tab===item.id?B[400]:'transparent'}`, border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit', transition:'all .12s' }}>
                 <Ic n={item.icon} s={18} c={tab===item.id?B[300]:B[600]} />
                 {!collapsed && <span style={{ fontSize:13, fontWeight:tab===item.id?700:400, color:tab===item.id?B[0]:'rgba(255,255,255,0.55)' }}>{item.label}</span>}
@@ -1318,14 +1318,14 @@ function DesktopApp({ data, user, onLogout }) {
 function DesktopDashboard({ data }) {
   const s = data.stats
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
       {/* Hero */}
-      <div style={{ background:`linear-gradient(135deg,${B[900]},${B[800]})`, padding:'28px 32px', display:'flex', gap:48, alignItems:'flex-end', flexWrap:'wrap' }}>
-        <div><div style={{ fontSize:11, color:B[400], textTransform:'uppercase', letterSpacing:1, marginBottom:4 }}>Realizado — Junho 2025</div><div style={{ fontSize:40, fontWeight:900, color:B[0], letterSpacing:-2, fontVariantNumeric:'tabular-nums' }}>{fmt(s.salesMonth)}</div></div>
-        <div style={{ paddingBottom:4 }}><div style={{ fontSize:11, color:B[400] }}>Meta</div><div style={{ fontSize:28, fontWeight:700, color:B[300], fontVariantNumeric:'tabular-nums' }}>{fmt(s.target)}</div></div>
-        <div style={{ flex:1, minWidth:200, paddingBottom:8 }}><div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}><span style={{ fontSize:11, color:B[400] }}>Atingimento</span><span style={{ fontSize:15, fontWeight:800, color:B[200] }}>{s.attainment}%</span></div><div style={{ background:B[700], height:8 }}><div style={{ width:`${s.attainment}%`, height:8, background:B[400] }} /></div></div>
+      <div style={{ background:`linear-gradient(135deg,${B[900]},${B[800]})`, padding:'14px 24px', display:'flex', gap:24, alignItems:'center', flexWrap:'wrap' }}>
+        <div><div style={{ fontSize:11, color:B[400], textTransform:'uppercase', letterSpacing:1, marginBottom:4 }}>Realizado — Junho 2025</div><div style={{ fontSize:30, fontWeight:900, color:B[0], letterSpacing:-1, fontVariantNumeric:'tabular-nums' }}>{fmt(s.salesMonth)}</div></div>
+        <div style={{ paddingBottom:4 }}><div style={{ fontSize:11, color:B[400] }}>Meta</div><div style={{ fontSize:20, fontWeight:700, color:B[300], fontVariantNumeric:'tabular-nums' }}>{fmt(s.target)}</div></div>
+        <div style={{ flex:1, minWidth:200, paddingBottom:8 }}><div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}><span style={{ fontSize:11, color:B[400] }}>Atingimento</span><span style={{ fontSize:15, fontWeight:800, color:B[200] }}>{s.attainment}%</span></div><div style={{ background:B[700], height:8 }}><div style={{ width:`${s.attainment}%`, height:8, background:B[400] }} /></div></div>
         <div style={{ display:'flex', gap:28 }}>
-          {[['Conversão',`${s.conversionRate}%`],['Ticket médio',`R$${(s.avgTicket/1000).toFixed(0)}k`],['Pipeline',`R$${(s.pipeline/1000).toFixed(0)}k`]].map(([l,v])=>(<div key={l}><div style={{ fontSize:10, color:B[400], textTransform:'uppercase', letterSpacing:.5, marginBottom:2 }}>{l}</div><div style={{ fontSize:22, fontWeight:800, color:B[0] }}>{v}</div></div>))}
+          {[['Conversão',`${s.conversionRate}%`],['Ticket médio',`R$${(s.avgTicket/1000).toFixed(0)}k`],['Pipeline',`R$${(s.pipeline/1000).toFixed(0)}k`]].map(([l,v])=>(<div key={l}><div style={{ fontSize:10, color:B[400], textTransform:'uppercase', letterSpacing:.5, marginBottom:2 }}>{l}</div><div style={{ fontSize:18, fontWeight:800, color:B[0] }}>{v}</div></div>))}
         </div>
       </div>
 
@@ -1341,7 +1341,7 @@ function DesktopDashboard({ data }) {
         {/* Chart */}
         <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'20px 20px 12px' }}>
           <div style={{ fontSize:13, fontWeight:700, color:B[800], marginBottom:14 }}>Vendas vs Meta — 2025</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={175}>
             <BarChart data={data.monthData} barSize={20} barGap={4}>
               <CartesianGrid strokeDasharray="2 4" stroke={B[150]} />
               <XAxis dataKey="m" tick={{ fontSize:11, fill:B[400] }} axisLine={false} tickLine={false} />
@@ -1701,7 +1701,7 @@ function DesktopFunil({ data }) {
 function DesktopMetas({ data }) {
   const s = data.stats
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{ background:B[0], border:`1px solid ${B[150]}`, padding:'24px 28px', display:'flex', gap:40, alignItems:'center', flexWrap:'wrap' }}>
         <div><div style={{ fontSize:11, fontWeight:700, color:B[700], textTransform:'uppercase', letterSpacing:.7, marginBottom:4 }}>Meta Junho 2025</div><div style={{ fontSize:32, fontWeight:900, color:B[800], letterSpacing:-1 }}>{fmt(s.target)}</div></div>
         <div style={{ flex:1, minWidth:200 }}>
@@ -1747,7 +1747,7 @@ function DesktopGestao({ data }) {
   const s = data.stats
   const convData = [{m:'Jan',t:28},{m:'Fev',t:35},{m:'Mar',t:30},{m:'Abr',t:38},{m:'Mai',t:42},{m:'Jun',t:34}]
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:1, background:B[200] }}>
         <KpiCard label="Pipeline"     value={fmt(s.pipeline)}          sub="6 oportunidades"    icon="funnel" accent />
         <KpiCard label="Ticket médio" value={`R$${(s.avgTicket/1000).toFixed(0)}k`} sub="pedidos em jun" icon="dollar" accent />
@@ -1796,7 +1796,7 @@ function DesktopGestao({ data }) {
 
 function DesktopErp({ data }) {
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{ background:B[0], border:`1px solid ${B[150]}`, borderTop:`3px solid ${B[800]}`, padding:'24px 28px' }}>
         <div style={{ fontSize:15, fontWeight:800, color:B[800], marginBottom:4 }}>Integração ERP</div>
         <div style={{ fontSize:13, color:B[500] }}>Endpoint webhook configurado · Supabase Edge Function ativa</div>
@@ -2146,3 +2146,4 @@ export default function App() {
     ? <MobileApp  data={data} user={user} onLogout={handleLogout} />
     : <DesktopApp data={data} user={user} onLogout={handleLogout} />
 }
+
