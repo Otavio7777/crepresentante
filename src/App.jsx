@@ -1457,10 +1457,19 @@ function DesktopConversas({ data }) {
   const [search, setSearch]       = useState('')
 
   const ac      = data.contacts.find(c => c.id === activeId)
-  const sendMsg = text => {
+  const sendMsg = async text => {
     const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
     setMsgs(m => ({ ...m, [activeId]: [...(m[activeId]||[]), { from:'m', text, time:now }] }))
+    await data.sendWhatsAppMessage(activeId, text, ac?.phone)
   }
+
+  // Realtime — mensagens recebidas via WhatsApp
+  useEffect(() => {
+    const sub = data.subscribeToContactMessages?.(activeId, msg => {
+      setMsgs(m => ({ ...m, [activeId]: [...(m[activeId]||[]), msg] }))
+    })
+    return () => sub?.unsubscribe?.()
+  }, [activeId])
 
   const filteredContacts = data.contacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
