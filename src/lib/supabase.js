@@ -208,6 +208,24 @@ export const conversations = {
       msg_type:        type,
     }).select().single(),
 
+
+  findOrCreate: async (userId, contactId) => {
+    // Busca conversa existente
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('user_id',    userId)
+      .eq('contact_id', contactId)
+      .maybeSingle()
+    if (existing) return { data: existing }
+    // Cria nova conversa
+    return supabase
+      .from('conversations')
+      .insert({ user_id: userId, contact_id: contactId, unread: 0 })
+      .select('id')
+      .single()
+  },
+
   markRead: (conversationId) =>
     supabase.from('conversations').update({ unread: 0 }).eq('id', conversationId),
 
