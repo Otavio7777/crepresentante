@@ -1146,8 +1146,8 @@ function MobileContatos({ data, onNav }) {
           <Ic n="chevR" s={15} c={B[300]} />
         </div>
       ))}
+      {addOpen && <AddContactModal onClose={()=>setAddOpen(false)} onSave={()=>setAddOpen(false)} />}
     </div>
-      {addOpen && <AddContactModal onClose={()=>setAddOpen(false)} onSave={c=>{setAddOpen(false)}} />}
   )
 }
 
@@ -1670,8 +1670,8 @@ function DesktopContatos({ data, onNav }) {
           </div>
         </div>
       )}
+      {addOpen && <AddContactModal onClose={()=>setAddOpen(false)} onSave={()=>setAddOpen(false)} />}
     </div>
-      {addOpen && <AddContactModal onClose={()=>setAddOpen(false)} onSave={c=>{setAddOpen(false)}} />}
   )
 }
 
