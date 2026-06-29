@@ -221,7 +221,7 @@ export const conversations = {
     // Cria nova conversa
     return supabase
       .from('conversations')
-      .insert({ user_id: userId, contact_id: contactId, unread: 0 })
+      .insert({ user_id: userId, contact_id: contactId, unread: 0, status: 'active' })
       .select('id')
       .single()
   },
