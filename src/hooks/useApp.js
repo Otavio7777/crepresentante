@@ -171,29 +171,63 @@ export function useAppData(userId) {
   }, [isDemo, userId])
 
   // ── Subscreve mensagens recebidas de um contato via Supabase Realtime ────────
-  const subscribeToContactMessages = useCallback((contactId, onMsg) => {
-    if (isDemo || !userId) return null
-    let channel = null
-    sbConv.findOrCreate(userId, contactId).then(({ data: conv }) => {
-      if (!conv?.id) return
-      channel = supabase
-        .channel(`msgs-${conv.id}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'messages',
-          filter: `conversation_id=eq.${conv.id}`,
-        }, ({ new: msg }) => {
-          if (msg.from_role !== 'rep') {
-            onMsg({
-              from: 'c',
-              text: msg.text,
-              time: new Date(msg.created_at)
-                .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            })
-          }
-        })
-        .subscribe()
-    })
-    return { unsubscribe: () => channel?.unsubscribe() }
+  const subscribeToContactMessages = useCallback((contactId, onMsg, phone) => {
+    const channels = []
+
+    // Canal 1: whatsapp_messages por telefone — funciona para todos os usuários
+    // (política public_rw) e é alimentado pelo Edge Function whatsapp-webhook
+    if (phone) {
+      const digits = (phone || '').replace(/\D/g, '')
+      const normalized = (digits.startsWith('55') && digits.length >= 12)
+        ? digits
+        : (digits.length >= 10 ? '55' + digits : null)
+
+      if (normalized) {
+        const waCh = supabase
+          .channel(`wa-in-${normalized}-${contactId}`)
+          .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'whatsapp_messages',
+            filter: `contact_phone=eq.${normalized}`,
+          }, ({ new: row }) => {
+            if (row.direction === 'inbound') {
+              onMsg({
+                from: 'c',
+                text: row.text,
+                time: new Date(row.created_at || Date.now())
+                  .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+              })
+            }
+          })
+          .subscribe()
+        channels.push(waCh)
+      }
+    }
+
+    // Canal 2: tabela messages via conversations — para usuários autenticados
+    if (!isDemo && userId) {
+      sbConv.findOrCreate(userId, contactId).then(({ data: conv }) => {
+        if (!conv?.id) return
+        const msgCh = supabase
+          .channel(`msgs-${conv.id}`)
+          .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'messages',
+            filter: `conversation_id=eq.${conv.id}`,
+          }, ({ new: msg }) => {
+            if (msg.from_role !== 'rep') {
+              onMsg({
+                from: 'c',
+                text: msg.text,
+                time: new Date(msg.created_at)
+                  .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+              })
+            }
+          })
+          .subscribe()
+        channels.push(msgCh)
+      })
+    }
+
+    return { unsubscribe: () => channels.forEach(ch => ch?.unsubscribe?.()) }
   }, [isDemo, userId])
 
   return {
