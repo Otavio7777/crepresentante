@@ -63,13 +63,28 @@ export function useAppData(userId) {
   const [visits,        setVisits]        = useState(MOCK.visits)
   const [messages,      setMessages]      = useState(MOCK.messages)
   const [loading,       setLoading]       = useState(false)
+  const [whatsappConvs, setWhatsappConvs] = useState([])
+
+  // Normaliza conversas do Supabase em formato de contato para o chat
+  const buildConvContacts = (convs) => convs.map(c => ({
+    id:              c.contact_id,
+    convId:          c.id,
+    name:            c.contacts?.name  || `+${c.contact_id}`,
+    company:         c.contacts?.company || '',
+    phone:           c.contacts?.phone  || '',
+    av:              (c.contacts?.name || '??').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase(),
+    last_contact_at: c.last_msg_at ? new Date(c.last_msg_at).toLocaleDateString('pt-BR') : '',
+    lastMsg:         c.last_msg  || '',
+    unread:          c.unread    || 0,
+    stage: 'prospect', tags: [], pipeline_value: 0, notes: '',
+  }))
 
   useEffect(() => {
     if (isDemo) return
     setLoading(true)
 
     Promise.all([
-      sbContacts.list(userId).then(({ data }) => data && setContacts(data.map(normalizeContact))),
+      sbContacts.list(userId).then(({ data }) => data?.length && setContacts(data.map(normalizeContact))),
       sbProducts.list().then(({ data }) => {
         if (!data) return
         setProducts(data.map(normalizeProduct))
@@ -81,6 +96,21 @@ export function useAppData(userId) {
       sbQuotes.list(userId).then(({ data }) => data && setQuotes(data.map(normalizeQuote))),
       sbVisits.list(userId, { upcoming: true }).then(({ data }) => data && setVisits(data.map(normalizeVisit))),
     ]).finally(() => setLoading(false))
+  }, [userId, isDemo])
+
+  // Carrega conversas WhatsApp + assina novas via Realtime
+  useEffect(() => {
+    if (isDemo || !userId) return
+    const load = () =>
+      sbConv.list(userId).then(({ data }) => {
+        if (data?.length) setWhatsappConvs(buildConvContacts(data))
+      })
+    load()
+    const ch = supabase
+      .channel(`convs-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_id=eq.${userId}` }, load)
+      .subscribe()
+    return () => ch.unsubscribe()
   }, [userId, isDemo])
 
   // Live messages state (managed locally in chat)
@@ -237,6 +267,7 @@ export function useAppData(userId) {
     paymentTerms: MOCK.payment_terms, deliveryOptions: MOCK.delivery_options,
     addMessage, createOrder, updateContactStage, addContact,
     sendWhatsAppMessage, subscribeToContactMessages,
+    whatsappConvs,
   }
 }
 
