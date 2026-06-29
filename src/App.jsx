@@ -1029,7 +1029,16 @@ function MobileConversas({ data }) {
   const [msgs, setMsgs]         = useState({ ...MOCK.messages })
   const [showOrder, setShowOrder] = useState(false)
   const ac = data.contacts.find(c=>c.id===activeId)
-  const sendMsg = text => { const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); setMsgs(m=>({...m,[activeId]:[...(m[activeId]||[]),{from:'m',text,time:now}]})); data.addMessage(activeId,{from:'m',text,time:now}) }
+  const sendMsg = async text => { const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); setMsgs(m=>({...m,[activeId]:[...(m[activeId]||[]),{from:'m',text,time:now}]})); await data.sendWhatsAppMessage(activeId, text, ac?.phone) }
+
+  // Realtime — mensagens recebidas via WhatsApp (whatsapp_messages + messages)
+  useEffect(() => {
+    if (!activeId) return
+    const sub = data.subscribeToContactMessages?.(activeId, msg => {
+      setMsgs(m => ({ ...m, [activeId]: [...(m[activeId]||[]), msg] }))
+    }, ac?.phone)
+    return () => sub?.unsubscribe?.()
+  }, [activeId])
   if (activeId && showOrder) return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <div style={{ background:B[0], borderBottom:`1px solid ${B[150]}`, padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
@@ -1467,9 +1476,9 @@ function DesktopConversas({ data }) {
   useEffect(() => {
     const sub = data.subscribeToContactMessages?.(activeId, msg => {
       setMsgs(m => ({ ...m, [activeId]: [...(m[activeId]||[]), msg] }))
-    })
+    }, ac?.phone)
     return () => sub?.unsubscribe?.()
-  }, [activeId])
+  }, [activeId, ac?.phone])
 
   const filteredContacts = data.contacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
