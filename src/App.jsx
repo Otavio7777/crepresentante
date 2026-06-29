@@ -1029,6 +1029,7 @@ function MobilePedidos({ data }) {
 
 function MobileConversas({ data }) {
   const [msgText, setMsgText] = useState('')
+  const mobileContacts = (data.whatsappConvs?.length ? data.whatsappConvs : data.contacts)
   const [activeId, setActiveId] = useState(null)
   const [msgs, setMsgs]         = useState({ ...MOCK.messages })
   const [showOrder, setShowOrder] = useState(false)
@@ -1075,7 +1076,7 @@ function MobileConversas({ data }) {
   )
   return (
     <div>
-      {data.contacts.map(c=>{
+      {mobileContacts.map(c=>{
         const last=(msgs[c.id]||[]).at(-1)
         return (
           <div key={c.id} onClick={()=>setActiveId(c.id)} style={{ display:'flex', gap:12, padding:'14px 16px', background:B[0], borderBottom:`1px solid ${B[100]}`, cursor:'pointer', alignItems:'center' }}>
@@ -1466,7 +1467,8 @@ function DesktopPedidos({ data }) {
 }
 
 function DesktopConversas({ data }) {
-  const [activeId, setActiveId]   = useState(data.contacts[0]?.id)
+  const contacts = (data.whatsappConvs?.length ? data.whatsappConvs : data.contacts)
+  const [activeId, setActiveId]   = useState(contacts[0]?.id)
   const [msgs, setMsgs]           = useState({ ...MOCK.messages })
   const [rightTab, setRightTab]   = useState('info') // info | order
   const [search, setSearch]       = useState('')
@@ -1486,7 +1488,7 @@ function DesktopConversas({ data }) {
     return () => sub?.unsubscribe?.()
   }, [activeId, ac?.phone])
 
-  const filteredContacts = data.contacts.filter(c =>
+  const filteredContacts = contacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.company.toLowerCase().includes(search.toLowerCase())
   )
