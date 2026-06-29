@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { B, Ic, Av, Tag, tagVariant, fmt, pct, MOCK, AGENDA, ANUNCIOS, CAMPANHAS, CADENCIAS, ERP_PRODUCTS_DETAIL } from './lib/data.jsx'
 import { useIsMobile, useAuth, useAppData } from './hooks/useApp.js'
-import { WhatsAppConnect } from './WhatsAppConnect.jsx'
 
 // ─── Constants ────────────────────────────────
 const STAGES     = ['closing','negotiation','proposal','qualified','prospect']
@@ -638,10 +637,8 @@ function Produtos() {
 }
 
 // ─── Page: MARKETING ──────────────────────────────────────────────────────────
-function Marketing({ data, isMobile, nav }) {
-  const [sub, setSub]           = useState('agenda')
-  const [ads, setAds]           = useState(ANUNCIOS_MOCK)
-  const [campanhas, setCampanhas] = useState(CAMPANHAS_MOCK)
+function Marketing() {
+  const [sub, setSub] = useState('agenda')
 
   return (
     <div style={{ display:'flex', flexDirection:'column', minHeight:'100%' }}>
@@ -707,9 +704,9 @@ function Marketing({ data, isMobile, nav }) {
                 </div>
                 {v.notes && <div style={{ marginTop:8, fontSize:11, color:B[600], background:B[50], padding:'6px 10px', borderLeft:`2px solid ${B[300]}` }}>{v.notes}</div>}
                 <div style={{ marginTop:10, display:'flex', gap:6 }}>
-                  <button onClick={()=>nav?.go('conversas')} style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Abrir chat</button>
-                  <button onClick={()=>nav?.order()} style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Tirar pedido</button>
-                  <button onClick={()=>alert('Reagendamento em breve')} style={{ padding:'7px 12px', background:B[50], color:B[500], border:`1px solid ${B[200]}`, fontSize:10, cursor:'pointer' }}>Reagendar</button>
+                  <button style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Abrir chat</button>
+                  <button style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Tirar pedido</button>
+                  <button style={{ padding:'7px 12px', background:B[50], color:B[500], border:`1px solid ${B[200]}`, fontSize:10, cursor:'pointer' }}>Reagendar</button>
                 </div>
               </div>
             ))}
@@ -725,7 +722,7 @@ function Marketing({ data, isMobile, nav }) {
                 <Ic n="plus" s={13} c={B[0]} /> Novo anúncio
               </button>
             </div>
-            {ads.map(a => (
+            {ANUNCIOS.map(a => (
               <div key={a.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
                   <div>
@@ -755,9 +752,9 @@ function Marketing({ data, isMobile, nav }) {
                   </div>
                 )}
                 <div style={{ display:'flex', gap:6 }}>
-                  {a.status==='rascunho' && <button onClick={()=>setAds(ads=>ads.map(x=>x.id===a.id?{...x,status:'ativo'}:x))} style={{ flex:1, padding:'8px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>Enviar agora</button>}
-                  <button onClick={()=>alert('Editor em breve')} style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Editar</button>
-                  {a.status==='ativo' && <button onClick={()=>setAds(ads=>ads.map(x=>x.id===a.id?{...x,status:'pausado'}:x))} style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Pausar</button>}
+                  {a.status==='rascunho' && <button style={{ flex:1, padding:'8px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>Enviar agora</button>}
+                  <button style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Editar</button>
+                  {a.status==='ativo' && <button style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Pausar</button>}
                 </div>
               </div>
             ))}
@@ -773,7 +770,7 @@ function Marketing({ data, isMobile, nav }) {
                 <Ic n="plus" s={13} c={B[0]} /> Nova campanha
               </button>
             </div>
-            {campanhas.map(c => (
+            {CAMPANHAS.map(c => (
               <div key={c.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
                   <div>
@@ -799,8 +796,8 @@ function Marketing({ data, isMobile, nav }) {
                   </div>
                 )}
                 <div style={{ display:'flex', gap:6 }}>
-                  {c.status==='rascunho' && <button onClick={()=>setCampanhas(cs=>cs.map(x=>x.id===c.id?{...x,status:'ativo'}:x))} style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Iniciar campanha</button>}
-                  <button onClick={()=>alert('Detalhes em breve')} style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Ver detalhes</button>
+                  {c.status==='rascunho' && <button style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Iniciar campanha</button>}
+                  <button style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Ver detalhes</button>
                 </div>
               </div>
             ))}
@@ -862,14 +859,6 @@ function Marketing({ data, isMobile, nav }) {
 function MobileApp({ data, user, onLogout }) {
   const [tab, setTab]         = useState('home')
   const [sideOpen, setSideOpen] = useState(false)
-  const [orderOpen, setOrderOpen]         = useState(false)
-  const [orderCid, setOrderCid]           = useState(null)
-  const [addContactOpen, setAddContactOpen] = useState(false)
-  const nav = {
-    go:     (t)        => { setTab(t); setSideOpen(false) },
-    order:  (cid=null) => { setOrderCid(cid); setOrderOpen(true) },
-    addContact: ()     => setAddContactOpen(true),
-  }
 
   const LABELS = { home:'Início', pedidos:'Tirar Pedido', conversas:'Conversas', contatos:'Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo ERP', mais:'Mais' }
   const SIDE_NAV = [
@@ -885,8 +874,6 @@ function MobileApp({ data, user, onLogout }) {
     { id:'produtos',   label:'Catálogo ERP',        icon:'erp'    },
     { section:'Performance' },
     { id:'mais',       label:'Metas & Gestão',      icon:'bar'    },
-    { section:'Config.' },
-    { id:'whatsapp',   label:'WhatsApp',            icon:'phone'  },
   ]
 
   return (
@@ -939,12 +926,11 @@ function MobileApp({ data, user, onLogout }) {
         {tab==='home'       && <MobileHome data={data} />}
         {tab==='pedidos'    && <MobilePedidos data={data} />}
         {tab==='conversas'  && <MobileConversas data={data} />}
-        {tab==='contatos'   && <MobileContatos data={data} nav={nav} />}
-        {tab==='funil'      && <MobileFunil data={data} nav={nav} />}
-        {tab==='marketing'  && <Marketing data={data} isMobile nav={nav} />}
+        {tab==='contatos'   && <MobileContatos data={data} />}
+        {tab==='funil'      && <MobileFunil data={data} />}
+        {tab==='marketing'  && <Marketing data={data} isMobile />}
         {tab==='produtos'   && <div style={{ padding:16 }}><div style={{ fontSize:12, color:B[500] }}>Abra no desktop para visualização completa dos produtos ERP.</div></div>}
         {tab==='mais'       && <MobileMais data={data} />}
-        {tab==='whatsapp'   && <WhatsAppConnect isMobile />}
       </div>
       {/* Bottom nav */}
       <div style={{ background:B[0], borderTop:`1px solid ${B[150]}`, display:'flex', flexShrink:0 }}>
@@ -957,8 +943,6 @@ function MobileApp({ data, user, onLogout }) {
         ))}
       </div>
       <FAB data={data} visible={!['pedidos','conversas'].includes(tab)} />
-      <OrderModal data={data} open={orderOpen} onClose={()=>{setOrderOpen(false);setOrderCid(null)}} initialClientId={orderCid} />
-      {addContactOpen && <AddContactModal data={data} onClose={()=>setAddContactOpen(false)} />}
     </div>
   )
 }
@@ -1032,19 +1016,6 @@ function MobilePedidos({ data }) {
   )
 }
 
-
-// ─── ChatInput — controlled send box ───────────────────────────
-function ChatInput({ onSend }) {
-  const [msg, setMsg] = useState('')
-  const send = () => { if(!msg.trim()) return; onSend(msg.trim()); setMsg('') }
-  return (
-    <div style={{ display:'flex', gap:8 }}>
-      <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Digite uma mensagem..." style={{ flex:1, padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-      <button onClick={send} style={{ width:40, height:40, background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Ic n="send" s={16} c={B[0]} /></button>
-    </div>
-  )
-}
-
 function MobileConversas({ data }) {
   const [activeId, setActiveId] = useState(null)
   const [msgs, setMsgs]         = useState({ ...MOCK.messages })
@@ -1076,7 +1047,8 @@ function MobileConversas({ data }) {
         {(msgs[activeId]||[]).map((m,i)=>(<div key={i} style={{ display:'flex', justifyContent:m.from==='m'?'flex-end':'flex-start' }}><div style={{ maxWidth:'72%', padding:'9px 12px', background:m.from==='m'?B[800]:B[0], border:m.from==='m'?'none':`1px solid ${B[200]}` }}><div style={{ fontSize:12, color:m.from==='m'?B[0]:B[800], whiteSpace:'pre-wrap', lineHeight:1.5 }}>{m.text}</div><div style={{ fontSize:10, color:m.from==='m'?B[300]:B[400], marginTop:4, textAlign:'right' }}>{m.time}</div></div></div>))}
       </div>
       <div style={{ background:B[0], padding:'10px 14px', display:'flex', gap:8, borderTop:`1px solid ${B[150]}`, flexShrink:0 }}>
-        <ChatInput onSend={sendMsg} />
+        <input value={''} onFocus={()=>{}} placeholder="Digite uma mensagem..." onChange={e=>sendMsg(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'){sendMsg(e.target.value); e.target.value=''}}} style={{ flex:1, padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
+        <button style={{ width:40, height:40, background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Ic n="send" s={16} c={B[0]} /></button>
       </div>
     </div>
   )
@@ -1120,8 +1092,8 @@ function MobileContatos({ data }) {
           <div><div style={{ fontSize:18, fontWeight:800, color:B[0] }}>{c.name}</div><div style={{ fontSize:13, color:B[300], marginTop:2 }}>{c.job_title}</div><div style={{ fontSize:12, color:B[400] }}>{c.company}</div><div style={{ display:'flex', gap:5, marginTop:8, flexWrap:'wrap' }}>{c.tags.map(t=><Tag key={t} label={t} variant={tagVariant(t)} />)}</div></div>
         </div>
         <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${B[150]}` }}>
-          {[['phone','Ligar',()=>window.open('tel:'+c.phone)],['chat','WhatsApp',()=>nav?.go('conversas')],['cal','Visita',()=>{}],['file','Orçar',()=>nav?.order(c.id)]].map(([icon,lbl,fn])=>(
-            <button key={lbl} onClick={fn} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'14px 8px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer' }}>
+          {[['phone','Ligar'],['chat','WhatsApp'],['cal','Visita'],['file','Orçar']].map(([icon,lbl])=>(
+            <button key={lbl} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'14px 8px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer' }}>
               <Ic n={icon} s={20} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.4 }}>{lbl}</span>
             </button>
           ))}
@@ -1153,7 +1125,7 @@ function MobileContatos({ data }) {
       </div>
       <div style={{ padding:'7px 16px', background:B[50], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between' }}>
         <span style={{ fontSize:11, color:B[500] }}>{list.length} contato{list.length!==1?'s':''}</span>
-        <button onClick={()=>nav?.addContact()} style={{ fontSize:11, fontWeight:700, color:B[800], background:'none', border:`1px solid ${B[300]}`, padding:'4px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}><Ic n="plus" s={12} c={B[800]} /> Novo</button>
+        <button style={{ fontSize:11, fontWeight:700, color:B[800], background:'none', border:`1px solid ${B[300]}`, padding:'4px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}><Ic n="plus" s={12} c={B[800]} /> Novo</button>
       </div>
       {list.map(c=>(
         <div key={c.id} onClick={()=>setSelected(c.id)} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'13px 16px', display:'flex', gap:12, alignItems:'center', cursor:'pointer' }}>
@@ -1253,14 +1225,6 @@ function MobileMais({ data }) {
 function DesktopApp({ data, user, onLogout }) {
   const [tab, setTab]         = useState('dashboard')
   const [collapsed, setCollapsed] = useState(false)
-  const [orderOpen, setOrderOpen]         = useState(false)
-  const [orderCid, setOrderCid]           = useState(null)
-  const [addContactOpen, setAddContactOpen] = useState(false)
-  const nav = {
-    go:     (t)        => setTab(t),
-    order:  (cid=null) => { setOrderCid(cid); setOrderOpen(true) },
-    addContact: ()     => setAddContactOpen(true),
-  }
 
   const NAV = [
     { section:'Principal' },
@@ -1278,10 +1242,9 @@ function DesktopApp({ data, user, onLogout }) {
     { id:'gestao',    label:'Gestão',      icon:'bar'    },
     { section:'Config.' },
     { id:'erp',       label:'Integração ERP', icon:'settings' },
-    { id:'whatsapp',  label:'WhatsApp',        icon:'phone'    },
   ]
 
-  const LABELS = { dashboard:'Dashboard', pedidos:'Pedidos', conversas:'Conversas', contatos:'Carteira de Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo de Produtos ERP', metas:'Metas & Performance', gestao:'Gestão & Relatórios', erp:'Integração ERP', whatsapp:'Conexão WhatsApp' }
+  const LABELS = { dashboard:'Dashboard', pedidos:'Pedidos', conversas:'Conversas', contatos:'Carteira de Contatos', funil:'Funil de Vendas', marketing:'Marketing', produtos:'Catálogo de Produtos ERP', metas:'Metas & Performance', gestao:'Gestão & Relatórios', erp:'Integração ERP' }
 
   const W = collapsed ? 56 : 220
 
@@ -1328,7 +1291,7 @@ function DesktopApp({ data, user, onLogout }) {
               <button style={{ background:B[50], border:`1px solid ${B[200]}`, color:B[600], padding:'7px', cursor:'pointer', display:'flex' }}><Ic n="bell" s={16} /></button>
               <div style={{ position:'absolute', top:-3, right:-3, width:14, height:14, background:B[500], color:B[0], fontSize:8, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>5</div>
             </div>
-            <button onClick={()=>nav.order()} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Pedido</button>
+            <button style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Pedido</button>
             <Av lbl={(user?.full_name||'CS').split(' ').map(w=>w[0]).join('').slice(0,2)} sz={32} bg={B[700]} />
           </div>
         </div>
@@ -1336,22 +1299,18 @@ function DesktopApp({ data, user, onLogout }) {
         {/* Content */}
         <div style={{ flex:1, overflow:['conversas','pedidos','produtos'].includes(tab)?'hidden':'auto' }}>
           {tab==='dashboard' && <DesktopDashboard data={data} />}
-          {tab==='pedidos'   && <DesktopPedidos   data={data} nav={nav} />}
+          {tab==='pedidos'   && <DesktopPedidos   data={data} />}
           {tab==='conversas' && <DesktopConversas data={data} />}
-          {tab==='contatos'  && <DesktopContatos  data={data} nav={nav} />}
-          {tab==='funil'     && <DesktopFunil      data={data} nav={nav} />}
-          {tab==='marketing' && <Marketing         data={data} nav={nav} />}
+          {tab==='contatos'  && <DesktopContatos  data={data} />}
+          {tab==='funil'     && <DesktopFunil      data={data} />}
+          {tab==='marketing' && <Marketing         data={data} />}
           {tab==='produtos'  && <ProdutosERP       data={data} />}
           {tab==='metas'     && <DesktopMetas      data={data} />}
-          {tab==='gestao'    && <DesktopGestao     data={data} nav={nav} />}
+          {tab==='gestao'    && <DesktopGestao     data={data} />}
           {tab==='erp'       && <DesktopErp        data={data} />}
-          {tab==='whatsapp'  && <WhatsAppConnect />}
         </div>
       </div>
-    
-      {/* Modals */}
-      <OrderModal data={data} open={orderOpen} onClose={()=>{setOrderOpen(false);setOrderCid(null)}} initialClientId={orderCid} />
-      {addContactOpen && <AddContactModal data={data} onClose={()=>setAddContactOpen(false)} />}</div>
+    </div>
   )
 }
 
@@ -1660,7 +1619,7 @@ function DesktopContatos({ data }) {
             {STAGES.map(s=><option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
           </select>
           <div style={{ marginLeft:'auto' }}>
-            <button onClick={()=>nav?.addContact()} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Contato</button>
+            <button style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Contato</button>
           </div>
         </div>
         <div style={{ flex:1, overflowY:'auto' }}>
@@ -1679,7 +1638,7 @@ function DesktopContatos({ data }) {
                   <td style={{ padding:'12px 20px' }}><Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} /></td>
                   <td style={{ padding:'12px 20px', fontWeight:700, color:B[800], fontVariantNumeric:'tabular-nums' }}>{c.pipeline_value>0?fmt(c.pipeline_value):'—'}</td>
                   <td style={{ padding:'12px 20px', color:B[500] }}>{c.last_contact_at}</td>
-                  <td style={{ padding:'12px 20px' }}><div style={{ display:'flex', gap:5 }}><button onClick={()=>nav?.go('conversas')} style={{ padding:'5px 10px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Chat</button><button onClick={()=>nav?.order(c.id)} style={{ padding:'5px 10px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Orçar</button></div></td>
+                  <td style={{ padding:'12px 20px' }}><div style={{ display:'flex', gap:5 }}><button style={{ padding:'5px 10px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Chat</button><button style={{ padding:'5px 10px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Orçar</button></div></td>
                 </tr>
               ))}
             </tbody>
@@ -1694,7 +1653,7 @@ function DesktopContatos({ data }) {
             <div><div style={{ fontSize:16, fontWeight:800, color:B[0] }}>{sc.name}</div><div style={{ fontSize:12, color:B[300] }}>{sc.job_title}</div><div style={{ fontSize:11, color:B[400] }}>{sc.company}</div></div>
           </div>
           <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-            {[['phone','Ligar',()=>window.open('tel:'+sc.phone)],['chat','Chat',()=>nav?.go('conversas')],['file','Orçar',()=>nav?.order(sc.id)]].map(([icon,lbl,fn])=>(<button key={lbl} onClick={fn} style={{ flex:1, padding:'12px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><Ic n={icon} s={18} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase' }}>{lbl}</span></button>))}
+            {[['phone','Ligar'],['chat','Chat'],['file','Orçar']].map(([icon,lbl])=>(<button key={lbl} style={{ flex:1, padding:'12px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><Ic n={icon} s={18} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase' }}>{lbl}</span></button>))}
           </div>
           <div style={{ flex:1, overflowY:'auto' }}>
             {[['phone','Telefone',sc.phone],['mail','E-mail',sc.email],['map','Cidade',`${sc.city} · ${sc.state}`],['funnel','Estágio',STAGE_LABEL[sc.stage]||sc.stage],['tag','Tags',sc.tags.join(', ')]].map(([icon,label,val])=>(<div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:`1px solid ${B[100]}` }}><Ic n={icon} s={16} c={B[400]} /><div><div style={{ fontSize:10, color:B[400], marginBottom:1 }}>{label}</div><div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{val||'—'}</div></div></div>))}
@@ -1727,7 +1686,7 @@ function DesktopFunil({ data }) {
                   <div key={c.id} style={{ background:B[50], border:`1px solid ${B[200]}`, padding:'10px 12px' }}>
                     <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}><Av lbl={c.av} sz={26} bg={B[700]} /><div><div style={{ fontSize:11, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:10, color:B[500] }}>{c.city}</div></div></div>
                     {c.pipeline_value>0&&<div style={{ fontSize:12, fontWeight:800, color:B[700], marginBottom:6, fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}
-                    <div style={{ display:'flex', gap:4 }}><button onClick={()=>nav?.go('conversas')} style={{ flex:1, padding:'4px', background:B[800], color:B[0], border:'none', fontSize:9, fontWeight:800, cursor:'pointer' }}>Chat</button><button onClick={()=>nav?.order(c.id)} style={{ flex:1, padding:'4px', background:B[100], color:B[700], border:`1px solid ${B[200]}`, fontSize:9, fontWeight:700, cursor:'pointer' }}>Orçar</button></div>
+                    <div style={{ display:'flex', gap:4 }}><button style={{ flex:1, padding:'4px', background:B[800], color:B[0], border:'none', fontSize:9, fontWeight:800, cursor:'pointer' }}>Chat</button><button style={{ flex:1, padding:'4px', background:B[100], color:B[700], border:`1px solid ${B[200]}`, fontSize:9, fontWeight:700, cursor:'pointer' }}>Orçar</button></div>
                   </div>
                 ))}
               </div>
@@ -1824,7 +1783,7 @@ function DesktopGestao({ data }) {
       <div style={{ background:B[0], border:`1px solid ${B[150]}` }}>
         <div style={{ padding:'14px 20px', borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Pedidos Recentes</div>
-          <button onClick={()=>nav?.order()} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={12} c={B[0]} /> Novo</button>
+          <button style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={12} c={B[0]} /> Novo</button>
         </div>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead><tr style={{ background:B[50] }}>{['Número','Cliente','Valor','Pagamento','Origem','Status','Data'].map(h=>(<th key={h} style={{ padding:'10px 20px', textAlign:'left', fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.7, borderBottom:`1px solid ${B[150]}` }}>{h}</th>))}</tr></thead>
@@ -1909,114 +1868,124 @@ const CADENCIA_MOCK = [
   ]},
 ]
 
-
-// ═══ OrderModal — shared by FAB + DesktopApp ═══════════════════
-function OrderModal({ data, open, onClose, initialClientId=null }) {
-  const [step, setStep]         = useState('client')
-  const [clientId, setClientId] = useState(null)
-  const [search, setSearch]     = useState('')
-  const wasOpen = useRef(false)
-  if (open && !wasOpen.current) {
-    wasOpen.current = true
-    Promise.resolve().then(()=>{ setStep(initialClientId?'order':'client'); setClientId(initialClientId||null); setSearch('') })
-  }
-  if (!open) wasOpen.current = false
-  if (!open) return null
-  const client   = data.contacts.find(c=>c.id===clientId)
-  const filtered = data.contacts.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.company.toLowerCase().includes(search.toLowerCase()))
-  return (
-    <>
-      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.5)', zIndex:300, backdropFilter:'blur(2px)' }} />
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:301, background:B[0], borderRadius:'14px 14px 0 0', maxHeight:'88vh', display:'flex', flexDirection:'column', boxShadow:'0 -8px 40px rgba(15,20,50,0.15)' }}>
-        <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}><div style={{ width:40, height:4, background:B[200] }} /></div>
-        <div style={{ padding:'10px 18px 12px', borderBottom:`1px solid ${B[150]}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            {step==='order' && <button onClick={()=>{ setStep('client'); setClientId(null) }} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:'4px 6px 4px 0' }}><Ic n="back" s={20} c={B[800]} /></button>}
-            <div>
-              <div style={{ fontSize:14, fontWeight:800, color:B[800] }}>{step==='client'?'Tirar Pedido':`Pedido — ${client?.name?.split(' ')[0]}`}</div>
-              {step==='order' && <div style={{ fontSize:11, color:B[500] }}>{client?.company}</div>}
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background:B[100], border:'none', cursor:'pointer', display:'flex', padding:8 }}><Ic n="x" s={16} c={B[600]} /></button>
-        </div>
-        {step==='client' && (
-          <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <div style={{ padding:'10px 16px', borderBottom:`1px solid ${B[150]}` }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'9px 12px' }}>
-                <Ic n="search" s={15} c={B[400]} />
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." autoFocus style={{ border:'none', background:'none', outline:'none', fontSize:14, color:B[800], flex:1, fontFamily:'inherit' }} />
-              </div>
-            </div>
-            <div style={{ flex:1, overflowY:'auto' }}>
-              {filtered.map(c=>(
-                <div key={c.id} onClick={()=>{ setClientId(c.id); setStep('order') }} style={{ display:'flex', gap:12, padding:'13px 16px', borderBottom:`1px solid ${B[100]}`, cursor:'pointer', alignItems:'center' }}>
-                  <Av lbl={c.av} sz={40} bg={B[800]} />
-                  <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:12, color:B[500] }}>{c.company} · {c.city}</div></div>
-                  <Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {step==='order' && client && (
-          <div style={{ flex:1, overflow:'hidden' }}>
-            <OrderPanel contact={client} products={data.products} promotions={data.promotions} combos={data.combos} paymentTerms={data.paymentTerms} deliveryOptions={data.deliveryOptions} onSend={async (...args)=>{ await data.createOrder(...args); onClose() }} />
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
-
-// ═══ AddContactModal ════════════════════════════════════════════
-function AddContactModal({ data, onClose }) {
-  const [form, setForm] = useState({ name:'', company:'', phone:'', email:'', city:'', job_title:'' })
-  const set = (k,v) => setForm(f=>({...f,[k]:v}))
-  const save = () => { if (!form.name.trim()) return; data.addContact(form); onClose() }
-  return (
-    <>
-      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.5)', zIndex:300, backdropFilter:'blur(2px)' }} />
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:301, background:B[0], borderRadius:'14px 14px 0 0', maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
-        <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}><div style={{ width:40, height:4, background:B[200] }} /></div>
-        <div style={{ padding:'12px 20px 14px', borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontSize:15, fontWeight:800, color:B[800] }}>Novo Contato</div>
-          <button onClick={onClose} style={{ background:B[100], border:'none', cursor:'pointer', display:'flex', padding:8 }}><Ic n="x" s={16} c={B[600]} /></button>
-        </div>
-        <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-          {[['name','Nome completo *'],['company','Empresa'],['job_title','Cargo'],['phone','Telefone / WhatsApp'],['email','E-mail'],['city','Cidade']].map(([k,lbl])=>(
-            <div key={k}>
-              <div style={{ fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>{lbl}</div>
-              <input value={form[k]} onChange={e=>set(k,e.target.value)} style={{ width:'100%', padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit', boxSizing:'border-box' }} />
-            </div>
-          ))}
-        </div>
-        <div style={{ padding:'12px 20px 20px', borderTop:`1px solid ${B[150]}`, display:'flex', gap:8 }}>
-          <button onClick={onClose} style={{ flex:1, padding:'12px', background:B[50], color:B[600], border:`1px solid ${B[200]}`, fontSize:13, fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={save} style={{ flex:2, padding:'12px', background:B[800], color:B[0], border:'none', fontSize:13, fontWeight:800, cursor:'pointer' }}>Salvar Contato</button>
-        </div>
-      </div>
-    </>
-  )
-}
-
 // ═══════════════════════════════════════════════
 // FAB — Floating Action Button (tirar pedido rápido)
 // ═══════════════════════════════════════════════
 function FAB({ data, visible=true }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]     = useState(false)
+  const [step, setStep]     = useState('client') // client | order
+  const [clientId, setClientId] = useState(null)
+  const [search, setSearch] = useState('')
+
+  const client = data.contacts.find(c=>c.id===clientId)
+  const filtered = data.contacts.filter(c=>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.company.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const close = () => { setOpen(false); setStep('client'); setClientId(null); setSearch('') }
+
   if (!visible) return null
+
   return (
     <>
-      <button onClick={()=>setOpen(true)} style={{ position:'fixed', bottom:80, right:18, width:56, height:56, background:B[800], color:B[0], border:'none', borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 20px rgba(38,59,126,0.45)', zIndex:100 }}>
+      {/* FAB button */}
+      <button onClick={()=>setOpen(true)} style={{
+        position:'fixed', bottom:80, right:18, width:56, height:56,
+        background:B[800], color:B[0], border:'none', borderRadius:'50%',
+        cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+        boxShadow:'0 4px 20px rgba(38,59,126,0.45)',
+        zIndex:100, transition:'transform .15s',
+      }}>
         <Ic n="cart" s={24} c={B[0]} />
       </button>
-      <OrderModal data={data} open={open} onClose={()=>setOpen(false)} />
+
+      {/* Backdrop */}
+      {open && (
+        <div onClick={close} style={{ position:'fixed', inset:0, background:'rgba(15,20,50,0.5)', zIndex:300, backdropFilter:'blur(2px)' }} />
+      )}
+
+      {/* Bottom sheet */}
+      {open && (
+        <div style={{
+          position:'fixed', bottom:0, left:0, right:0, zIndex:301,
+          background:B[0], borderTop:`1px solid ${B[200]}`,
+          borderRadius:'14px 14px 0 0',
+          maxHeight:'88vh', display:'flex', flexDirection:'column',
+          boxShadow:'0 -8px 40px rgba(15,20,50,0.15)',
+        }}>
+          {/* Handle */}
+          <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}>
+            <div style={{ width:40, height:4, background:B[200] }} />
+          </div>
+
+          {/* Header */}
+          <div style={{ padding:'10px 18px 12px', borderBottom:`1px solid ${B[150]}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {step==='order' && (
+                <button onClick={()=>{ setStep('client'); setClientId(null) }} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:'4px 6px 4px 0' }}>
+                  <Ic n="back" s={20} c={B[800]} />
+                </button>
+              )}
+              <div>
+                <div style={{ fontSize:14, fontWeight:800, color:B[800] }}>
+                  {step==='client' ? 'Tirar Pedido' : `Pedido — ${client?.name?.split(' ')[0]}`}
+                </div>
+                {step==='order' && <div style={{ fontSize:11, color:B[500] }}>{client?.company}</div>}
+              </div>
+            </div>
+            <button onClick={close} style={{ background:B[100], border:'none', cursor:'pointer', display:'flex', padding:8 }}>
+              <Ic n="x" s={16} c={B[600]} />
+            </button>
+          </div>
+
+          {/* Step 1: Selecionar cliente */}
+          {step==='client' && (
+            <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+              <div style={{ padding:'10px 16px', borderBottom:`1px solid ${B[150]}` }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, background:B[50], border:`1px solid ${B[200]}`, padding:'9px 12px' }}>
+                  <Ic n="search" s={15} c={B[400]} />
+                  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." autoFocus
+                    style={{ border:'none', background:'none', outline:'none', fontSize:14, color:B[800], flex:1, fontFamily:'inherit' }} />
+                </div>
+              </div>
+              <div style={{ flex:1, overflowY:'auto' }}>
+                {filtered.map(c=>(
+                  <div key={c.id} onClick={()=>{ setClientId(c.id); setStep('order') }} style={{ display:'flex', gap:12, padding:'13px 16px', borderBottom:`1px solid ${B[100]}`, cursor:'pointer', alignItems:'center' }}>
+                    <Av lbl={c.av} sz={40} bg={B[800]} />
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:B[800] }}>{c.name}</div>
+                      <div style={{ fontSize:12, color:B[500] }}>{c.company} · {c.city}</div>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
+                      <Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} />
+                      {c.pipeline_value>0 && <span style={{ fontSize:11, fontWeight:700, color:B[700], fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Order panel for selected client */}
+          {step==='order' && client && (
+            <div style={{ flex:1, overflow:'hidden' }}>
+              <OrderPanel
+                contact={client}
+                products={data.products}
+                promotions={data.promotions}
+                combos={data.combos}
+                paymentTerms={data.paymentTerms}
+                deliveryOptions={data.deliveryOptions}
+                onSend={async (...args)=>{ await data.createOrder(...args); close() }}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </>
   )
 }
-
-// ═══════════════════════════════════════════════
-// PRODUTOS ERP
 
 // ═══════════════════════════════════════════════
 // PRODUTOS ERP — visualização integrada
