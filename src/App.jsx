@@ -637,8 +637,10 @@ function Produtos() {
 }
 
 // ─── Page: MARKETING ──────────────────────────────────────────────────────────
-function Marketing() {
-  const [sub, setSub] = useState('agenda')
+function Marketing({ data, isMobile, onNav }) {
+  const [sub, setSub]             = useState('agenda')
+  const [ads, setAds]             = useState([...ANUNCIOS])
+  const [campanhas, setCampanhas] = useState([...CAMPANHAS])
 
   return (
     <div style={{ display:'flex', flexDirection:'column', minHeight:'100%' }}>
@@ -704,9 +706,9 @@ function Marketing() {
                 </div>
                 {v.notes && <div style={{ marginTop:8, fontSize:11, color:B[600], background:B[50], padding:'6px 10px', borderLeft:`2px solid ${B[300]}` }}>{v.notes}</div>}
                 <div style={{ marginTop:10, display:'flex', gap:6 }}>
-                  <button style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Abrir chat</button>
-                  <button style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Tirar pedido</button>
-                  <button style={{ padding:'7px 12px', background:B[50], color:B[500], border:`1px solid ${B[200]}`, fontSize:10, cursor:'pointer' }}>Reagendar</button>
+                  <button onClick={()=>onNav?.('conversas')} style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Abrir chat</button>
+                  <button onClick={()=>onNav?.('pedidos')} style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Tirar pedido</button>
+                  <button onClick={()=>alert('Reagendamento em breve')} style={{ padding:'7px 12px', background:B[50], color:B[500], border:`1px solid ${B[200]}`, fontSize:10, cursor:'pointer' }}>Reagendar</button>
                 </div>
               </div>
             ))}
@@ -722,7 +724,7 @@ function Marketing() {
                 <Ic n="plus" s={13} c={B[0]} /> Novo anúncio
               </button>
             </div>
-            {ANUNCIOS.map(a => (
+            {ads.map(a => (
               <div key={a.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
                   <div>
@@ -752,9 +754,9 @@ function Marketing() {
                   </div>
                 )}
                 <div style={{ display:'flex', gap:6 }}>
-                  {a.status==='rascunho' && <button style={{ flex:1, padding:'8px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>Enviar agora</button>}
-                  <button style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Editar</button>
-                  {a.status==='ativo' && <button style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Pausar</button>}
+                  {a.status==='rascunho' && <button onClick={()=>setAds(prev=>prev.map(x=>x.id===a.id?{...x,status:'ativo'}:x))} style={{ flex:1, padding:'8px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>Enviar agora</button>}
+                  <button onClick={()=>alert('Editor de anúncio em breve')} style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Editar</button>
+                  {a.status==='ativo' && <button onClick={()=>setAds(prev=>prev.map(x=>x.id===a.id?{...x,status:'pausado'}:x))} style={{ flex:1, padding:'8px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:11, fontWeight:700, cursor:'pointer' }}>Pausar</button>}
                 </div>
               </div>
             ))}
@@ -770,7 +772,7 @@ function Marketing() {
                 <Ic n="plus" s={13} c={B[0]} /> Nova campanha
               </button>
             </div>
-            {CAMPANHAS.map(c => (
+            {campanhas.map(c => (
               <div key={c.id} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'14px 16px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
                   <div>
@@ -796,8 +798,8 @@ function Marketing() {
                   </div>
                 )}
                 <div style={{ display:'flex', gap:6 }}>
-                  {c.status==='rascunho' && <button style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Iniciar campanha</button>}
-                  <button style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Ver detalhes</button>
+                  {c.status==='rascunho' && <button onClick={()=>setCampanhas(prev=>prev.map(x=>x.id===c.id?{...x,status:'ativo'}:x))} style={{ flex:1, padding:'7px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Iniciar campanha</button>}
+                  <button onClick={()=>alert('Detalhes em breve')} style={{ flex:1, padding:'7px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Ver detalhes</button>
                 </div>
               </div>
             ))}
@@ -926,9 +928,9 @@ function MobileApp({ data, user, onLogout }) {
         {tab==='home'       && <MobileHome data={data} />}
         {tab==='pedidos'    && <MobilePedidos data={data} />}
         {tab==='conversas'  && <MobileConversas data={data} />}
-        {tab==='contatos'   && <MobileContatos data={data} />}
-        {tab==='funil'      && <MobileFunil data={data} />}
-        {tab==='marketing'  && <Marketing data={data} isMobile />}
+        {tab==='contatos'   && <MobileContatos data={data} onNav={setTab} />}
+        {tab==='funil'      && <MobileFunil data={data} onNav={setTab} />}
+        {tab==='marketing'  && <Marketing data={data} isMobile onNav={setTab} />}
         {tab==='produtos'   && <div style={{ padding:16 }}><div style={{ fontSize:12, color:B[500] }}>Abra no desktop para visualização completa dos produtos ERP.</div></div>}
         {tab==='mais'       && <MobileMais data={data} />}
       </div>
@@ -1017,6 +1019,7 @@ function MobilePedidos({ data }) {
 }
 
 function MobileConversas({ data }) {
+  const [msgText, setMsgText] = useState('')
   const [activeId, setActiveId] = useState(null)
   const [msgs, setMsgs]         = useState({ ...MOCK.messages })
   const [showOrder, setShowOrder] = useState(false)
@@ -1047,8 +1050,8 @@ function MobileConversas({ data }) {
         {(msgs[activeId]||[]).map((m,i)=>(<div key={i} style={{ display:'flex', justifyContent:m.from==='m'?'flex-end':'flex-start' }}><div style={{ maxWidth:'72%', padding:'9px 12px', background:m.from==='m'?B[800]:B[0], border:m.from==='m'?'none':`1px solid ${B[200]}` }}><div style={{ fontSize:12, color:m.from==='m'?B[0]:B[800], whiteSpace:'pre-wrap', lineHeight:1.5 }}>{m.text}</div><div style={{ fontSize:10, color:m.from==='m'?B[300]:B[400], marginTop:4, textAlign:'right' }}>{m.time}</div></div></div>))}
       </div>
       <div style={{ background:B[0], padding:'10px 14px', display:'flex', gap:8, borderTop:`1px solid ${B[150]}`, flexShrink:0 }}>
-        <input value={''} onFocus={()=>{}} placeholder="Digite uma mensagem..." onChange={e=>sendMsg(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'){sendMsg(e.target.value); e.target.value=''}}} style={{ flex:1, padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
-        <button style={{ width:40, height:40, background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Ic n="send" s={16} c={B[0]} /></button>
+        <input value={msgText} onChange={e=>setMsgText(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&msgText.trim()){sendMsg(msgText);setMsgText('')}}} placeholder="Digite uma mensagem..." style={{ flex:1, padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit' }} />
+        <button onClick={()=>{if(msgText.trim()){sendMsg(msgText);setMsgText('')}}} style={{ width:40, height:40, background:B[800], border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Ic n="send" s={16} c={B[0]} /></button>
       </div>
     </div>
   )
@@ -1072,7 +1075,9 @@ function MobileConversas({ data }) {
   )
 }
 
-function MobileContatos({ data }) {
+function MobileContatos({ data, onNav }) {
+  const [addOpen, setAddOpen] = useState(false)
+  const [newC, setNewC] = useState({ name:'', company:'', phone:'', email:'', city:'' })
   const [search, setSearch]   = useState('')
   const [selected, setSelected] = useState(null)
   const [showF, setShowF]     = useState(false)
@@ -1092,8 +1097,8 @@ function MobileContatos({ data }) {
           <div><div style={{ fontSize:18, fontWeight:800, color:B[0] }}>{c.name}</div><div style={{ fontSize:13, color:B[300], marginTop:2 }}>{c.job_title}</div><div style={{ fontSize:12, color:B[400] }}>{c.company}</div><div style={{ display:'flex', gap:5, marginTop:8, flexWrap:'wrap' }}>{c.tags.map(t=><Tag key={t} label={t} variant={tagVariant(t)} />)}</div></div>
         </div>
         <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${B[150]}` }}>
-          {[['phone','Ligar'],['chat','WhatsApp'],['cal','Visita'],['file','Orçar']].map(([icon,lbl])=>(
-            <button key={lbl} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'14px 8px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer' }}>
+          {[['phone','Ligar',()=>window.open('tel:'+c.phone)],['chat','WhatsApp',()=>window.open('https://wa.me/'+c.phone.replace(/\D/g,''))],['cal','Visita',()=>alert('Agendar visita em breve')],['file','Orçar',()=>onNav?.('pedidos')]].map(([icon,lbl,fn])=>(
+            <button key={lbl} onClick={fn} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'14px 8px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer' }}>
               <Ic n={icon} s={20} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.4 }}>{lbl}</span>
             </button>
           ))}
@@ -1125,7 +1130,7 @@ function MobileContatos({ data }) {
       </div>
       <div style={{ padding:'7px 16px', background:B[50], borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between' }}>
         <span style={{ fontSize:11, color:B[500] }}>{list.length} contato{list.length!==1?'s':''}</span>
-        <button style={{ fontSize:11, fontWeight:700, color:B[800], background:'none', border:`1px solid ${B[300]}`, padding:'4px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}><Ic n="plus" s={12} c={B[800]} /> Novo</button>
+        <button onClick={()=>setAddOpen(true)} style={{ fontSize:11, fontWeight:700, color:B[800], background:'none', border:`1px solid ${B[300]}`, padding:'4px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}><Ic n="plus" s={12} c={B[800]} /> Novo</button>
       </div>
       {list.map(c=>(
         <div key={c.id} onClick={()=>setSelected(c.id)} style={{ background:B[0], borderBottom:`1px solid ${B[100]}`, padding:'13px 16px', display:'flex', gap:12, alignItems:'center', cursor:'pointer' }}>
@@ -1142,10 +1147,11 @@ function MobileContatos({ data }) {
         </div>
       ))}
     </div>
+      {addOpen && <AddContactModal onClose={()=>setAddOpen(false)} onSave={c=>{setAddOpen(false)}} />}
   )
 }
 
-function MobileFunil({ data }) {
+function MobileFunil({ data, onNav }) {
   return (
     <div>
       <div style={{ background:B[0], padding:'14px 16px', borderBottom:`1px solid ${B[150]}`, display:'flex', gap:0 }}>
@@ -1166,8 +1172,8 @@ function MobileFunil({ data }) {
                 <Av lbl={c.av} sz={38} bg={B[700]} />
                 <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:11, color:B[500] }}>{c.company}</div>{c.pipeline_value>0&&<div style={{ fontSize:14, fontWeight:900, color:B[800], marginTop:4, fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}</div>
                 <div style={{ display:'flex', gap:5 }}>
-                  <button style={{ padding:'7px', background:B[800], border:'none', cursor:'pointer', display:'flex' }}><Ic n="chat" s={15} c={B[0]} /></button>
-                  <button style={{ padding:'7px', background:B[50], border:`1px solid ${B[200]}`, cursor:'pointer', display:'flex' }}><Ic n="file" s={15} c={B[600]} /></button>
+                  <button onClick={()=>onNav?.('conversas')} style={{ padding:'7px', background:B[800], border:'none', cursor:'pointer', display:'flex' }}><Ic n="chat" s={15} c={B[0]} /></button>
+                  <button onClick={()=>onNav?.('pedidos')} style={{ padding:'7px', background:B[50], border:`1px solid ${B[200]}`, cursor:'pointer', display:'flex' }}><Ic n="file" s={15} c={B[600]} /></button>
                 </div>
               </div>
             ))}
@@ -1291,7 +1297,7 @@ function DesktopApp({ data, user, onLogout }) {
               <button style={{ background:B[50], border:`1px solid ${B[200]}`, color:B[600], padding:'7px', cursor:'pointer', display:'flex' }}><Ic n="bell" s={16} /></button>
               <div style={{ position:'absolute', top:-3, right:-3, width:14, height:14, background:B[500], color:B[0], fontSize:8, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>5</div>
             </div>
-            <button style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Pedido</button>
+            <button onClick={()=>setTab('pedidos')} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Pedido</button>
             <Av lbl={(user?.full_name||'CS').split(' ').map(w=>w[0]).join('').slice(0,2)} sz={32} bg={B[700]} />
           </div>
         </div>
@@ -1301,12 +1307,12 @@ function DesktopApp({ data, user, onLogout }) {
           {tab==='dashboard' && <DesktopDashboard data={data} />}
           {tab==='pedidos'   && <DesktopPedidos   data={data} />}
           {tab==='conversas' && <DesktopConversas data={data} />}
-          {tab==='contatos'  && <DesktopContatos  data={data} />}
-          {tab==='funil'     && <DesktopFunil      data={data} />}
-          {tab==='marketing' && <Marketing         data={data} />}
+          {tab==='contatos'  && <DesktopContatos  data={data} onNav={setTab} />}
+          {tab==='funil'     && <DesktopFunil      data={data} onNav={setTab} />}
+          {tab==='marketing' && <Marketing         data={data} onNav={setTab} />}
           {tab==='produtos'  && <ProdutosERP       data={data} />}
           {tab==='metas'     && <DesktopMetas      data={data} />}
-          {tab==='gestao'    && <DesktopGestao     data={data} />}
+          {tab==='gestao'    && <DesktopGestao     data={data} onNav={setTab} />}
           {tab==='erp'       && <DesktopErp        data={data} />}
         </div>
       </div>
@@ -1541,8 +1547,8 @@ function DesktopConversas({ data }) {
             </div>
             {/* Actions */}
             <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-              {[['phone','Ligar'],['chat','Chat'],['cal','Visita'],['file','Orçar']].map(([icon,lbl]) => (
-                <button key={lbl} style={{ flex:1, padding:'10px 4px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+              {[['phone','Ligar',()=>window.open('tel:'+(ac?.phone||''))],['chat','Chat',()=>{}],['cal','Visita',()=>alert('Agendar em breve')],['file','Orçar',()=>{}]].map(([icon,lbl,fn]) => (
+                <button key={lbl} onClick={fn} style={{ flex:1, padding:'10px 4px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                   <Ic n={icon} s={17} c={B[800]} />
                   <span style={{ fontSize:8, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.3 }}>{lbl}</span>
                 </button>
@@ -1600,7 +1606,9 @@ function DesktopConversas({ data }) {
   )
 }
 
-function DesktopContatos({ data }) {
+function DesktopContatos({ data, onNav }) {
+  const [addOpen, setAddOpen] = useState(false)
+  const [newC, setNewC] = useState({ name:'', company:'', phone:'', email:'', city:'' })
   const [selected, setSelected] = useState(null)
   const [search, setSearch]     = useState('')
   const [stageF, setStageF]     = useState('all')
@@ -1619,7 +1627,7 @@ function DesktopContatos({ data }) {
             {STAGES.map(s=><option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
           </select>
           <div style={{ marginLeft:'auto' }}>
-            <button style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Contato</button>
+            <button onClick={()=>setAddOpen(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', background:B[800], color:B[0], border:'none', fontSize:12, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={13} c={B[0]} /> Novo Contato</button>
           </div>
         </div>
         <div style={{ flex:1, overflowY:'auto' }}>
@@ -1638,7 +1646,7 @@ function DesktopContatos({ data }) {
                   <td style={{ padding:'12px 20px' }}><Tag label={STAGE_LABEL[c.stage]||c.stage} variant={c.stage==='closing'?'success':c.stage==='prospect'?'prospect':'default'} /></td>
                   <td style={{ padding:'12px 20px', fontWeight:700, color:B[800], fontVariantNumeric:'tabular-nums' }}>{c.pipeline_value>0?fmt(c.pipeline_value):'—'}</td>
                   <td style={{ padding:'12px 20px', color:B[500] }}>{c.last_contact_at}</td>
-                  <td style={{ padding:'12px 20px' }}><div style={{ display:'flex', gap:5 }}><button style={{ padding:'5px 10px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Chat</button><button style={{ padding:'5px 10px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Orçar</button></div></td>
+                  <td style={{ padding:'12px 20px' }}><div style={{ display:'flex', gap:5 }}><button onClick={()=>onNav?.('conversas')} style={{ padding:'5px 10px', background:B[800], color:B[0], border:'none', fontSize:10, fontWeight:700, cursor:'pointer' }}>Chat</button><button onClick={()=>onNav?.('pedidos')} style={{ padding:'5px 10px', background:B[50], color:B[700], border:`1px solid ${B[200]}`, fontSize:10, fontWeight:700, cursor:'pointer' }}>Orçar</button></div></td>
                 </tr>
               ))}
             </tbody>
@@ -1653,7 +1661,7 @@ function DesktopContatos({ data }) {
             <div><div style={{ fontSize:16, fontWeight:800, color:B[0] }}>{sc.name}</div><div style={{ fontSize:12, color:B[300] }}>{sc.job_title}</div><div style={{ fontSize:11, color:B[400] }}>{sc.company}</div></div>
           </div>
           <div style={{ display:'flex', borderBottom:`1px solid ${B[150]}` }}>
-            {[['phone','Ligar'],['chat','Chat'],['file','Orçar']].map(([icon,lbl])=>(<button key={lbl} style={{ flex:1, padding:'12px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><Ic n={icon} s={18} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase' }}>{lbl}</span></button>))}
+            {[['phone','Ligar',()=>window.open('tel:'+sc.phone)],['chat','Chat',()=>onNav?.('conversas')],['file','Orçar',()=>onNav?.('pedidos')]].map(([icon,lbl,fn])=>(<button key={lbl} onClick={fn} style={{ flex:1, padding:'12px', background:B[0], border:'none', borderRight:`1px solid ${B[150]}`, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}><Ic n={icon} s={18} c={B[800]} /><span style={{ fontSize:9, fontWeight:700, color:B[600], textTransform:'uppercase' }}>{lbl}</span></button>))}
           </div>
           <div style={{ flex:1, overflowY:'auto' }}>
             {[['phone','Telefone',sc.phone],['mail','E-mail',sc.email],['map','Cidade',`${sc.city} · ${sc.state}`],['funnel','Estágio',STAGE_LABEL[sc.stage]||sc.stage],['tag','Tags',sc.tags.join(', ')]].map(([icon,label,val])=>(<div key={label} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:`1px solid ${B[100]}` }}><Ic n={icon} s={16} c={B[400]} /><div><div style={{ fontSize:10, color:B[400], marginBottom:1 }}>{label}</div><div style={{ fontSize:12, fontWeight:600, color:B[800] }}>{val||'—'}</div></div></div>))}
@@ -1663,10 +1671,11 @@ function DesktopContatos({ data }) {
         </div>
       )}
     </div>
+      {addOpen && <AddContactModal onClose={()=>setAddOpen(false)} onSave={c=>{setAddOpen(false)}} />}
   )
 }
 
-function DesktopFunil({ data }) {
+function DesktopFunil({ data, onNav }) {
   return (
     <div style={{ padding:28 }}>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:1, background:B[200], marginBottom:20 }}>
@@ -1686,7 +1695,7 @@ function DesktopFunil({ data }) {
                   <div key={c.id} style={{ background:B[50], border:`1px solid ${B[200]}`, padding:'10px 12px' }}>
                     <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}><Av lbl={c.av} sz={26} bg={B[700]} /><div><div style={{ fontSize:11, fontWeight:700, color:B[800] }}>{c.name}</div><div style={{ fontSize:10, color:B[500] }}>{c.city}</div></div></div>
                     {c.pipeline_value>0&&<div style={{ fontSize:12, fontWeight:800, color:B[700], marginBottom:6, fontVariantNumeric:'tabular-nums' }}>{fmt(c.pipeline_value)}</div>}
-                    <div style={{ display:'flex', gap:4 }}><button style={{ flex:1, padding:'4px', background:B[800], color:B[0], border:'none', fontSize:9, fontWeight:800, cursor:'pointer' }}>Chat</button><button style={{ flex:1, padding:'4px', background:B[100], color:B[700], border:`1px solid ${B[200]}`, fontSize:9, fontWeight:700, cursor:'pointer' }}>Orçar</button></div>
+                    <div style={{ display:'flex', gap:4 }}><button onClick={()=>onNav?.('conversas')} style={{ flex:1, padding:'4px', background:B[800], color:B[0], border:'none', fontSize:9, fontWeight:800, cursor:'pointer' }}>Chat</button><button onClick={()=>onNav?.('pedidos')} style={{ flex:1, padding:'4px', background:B[100], color:B[700], border:`1px solid ${B[200]}`, fontSize:9, fontWeight:700, cursor:'pointer' }}>Orçar</button></div>
                   </div>
                 ))}
               </div>
@@ -1743,7 +1752,7 @@ function DesktopMetas({ data }) {
   )
 }
 
-function DesktopGestao({ data }) {
+function DesktopGestao({ data, onNav }) {
   const s = data.stats
   const convData = [{m:'Jan',t:28},{m:'Fev',t:35},{m:'Mar',t:30},{m:'Abr',t:38},{m:'Mai',t:42},{m:'Jun',t:34}]
   return (
@@ -1783,7 +1792,7 @@ function DesktopGestao({ data }) {
       <div style={{ background:B[0], border:`1px solid ${B[150]}` }}>
         <div style={{ padding:'14px 20px', borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:11, fontWeight:700, color:B[800], textTransform:'uppercase', letterSpacing:.7 }}>Pedidos Recentes</div>
-          <button style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={12} c={B[0]} /> Novo</button>
+          <button onClick={()=>onNav?.('pedidos')} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 14px', background:B[800], color:B[0], border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}><Ic n="plus" s={12} c={B[0]} /> Novo</button>
         </div>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead><tr style={{ background:B[50] }}>{['Número','Cliente','Valor','Pagamento','Origem','Status','Data'].map(h=>(<th key={h} style={{ padding:'10px 20px', textAlign:'left', fontSize:10, fontWeight:700, color:B[600], textTransform:'uppercase', letterSpacing:.7, borderBottom:`1px solid ${B[150]}` }}>{h}</th>))}</tr></thead>
@@ -1867,6 +1876,42 @@ const CADENCIA_MOCK = [
     { dia:7,  acao:'Ligação: Atendimento personalizado',   status:'pending' },
   ]},
 ]
+
+
+// ─── AddContactModal ──────────────────────────────────────────
+function AddContactModal({ onClose, onSave }) {
+  const [form, setForm] = useState({ name:'', company:'', phone:'', email:'', city:'' })
+  const set = (k,v) => setForm(f=>({...f,[k]:v}))
+  const save = () => {
+    if (!form.name.trim()) return
+    onSave(form)
+    onClose()
+  }
+  return (
+    <>
+      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(10,20,40,0.45)', zIndex:400 }} />
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:401, background:'#fff', borderRadius:'14px 14px 0 0', maxHeight:'88vh', display:'flex', flexDirection:'column' }}>
+        <div style={{ display:'flex', justifyContent:'center', padding:'10px 0 0' }}><div style={{ width:40, height:4, background:B[200] }} /></div>
+        <div style={{ padding:'12px 20px 14px', borderBottom:`1px solid ${B[150]}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:15, fontWeight:800, color:B[800] }}>Novo Contato</span>
+          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', padding:4 }}><Ic n="x" s={20} c={B[600]} /></button>
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
+          {[['name','Nome completo *'],['company','Empresa'],['phone','Telefone / WhatsApp'],['email','E-mail'],['city','Cidade']].map(([k,lbl])=>(
+            <div key={k}>
+              <div style={{ fontSize:10, fontWeight:700, color:B[500], textTransform:'uppercase', letterSpacing:.5, marginBottom:4 }}>{lbl}</div>
+              <input value={form[k]} onChange={e=>set(k,e.target.value)} style={{ width:'100%', padding:'10px 12px', border:`1px solid ${B[200]}`, background:B[50], fontSize:13, color:B[800], outline:'none', fontFamily:'inherit', boxSizing:'border-box' }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ padding:'12px 20px 24px', borderTop:`1px solid ${B[150]}`, display:'flex', gap:8 }}>
+          <button onClick={onClose} style={{ flex:1, padding:12, background:B[50], color:B[600], border:`1px solid ${B[200]}`, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+          <button onClick={save} style={{ flex:2, padding:12, background:B[800], color:'#fff', border:'none', fontSize:13, fontWeight:800, cursor:'pointer' }}>Salvar</button>
+        </div>
+      </div>
+    </>
+  )
+}
 
 // ═══════════════════════════════════════════════
 // FAB — Floating Action Button (tirar pedido rápido)
