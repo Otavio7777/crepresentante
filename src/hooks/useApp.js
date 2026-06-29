@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, auth as sbAuth, contacts as sbContacts, products as sbProducts, catalog as sbCatalog, orders as sbOrders, quotes as sbQuotes, conversations as sbConvs, visits as sbVisits } from '../lib/supabase.js'
+import { sendText, formatOrderMsg } from '../lib/evolution.js'
+import { supabase, auth as sbAuth, contacts as sbContacts, products as sbProducts, catalog as sbCatalog, orders as sbOrders, quotes as sbQuotes, conversations as sbConv, visits as sbVisits } from '../lib/supabase.js'
 import { MOCK } from '../lib/data.jsx'
 
 // ─── useIsMobile ──────────────────────────────────────────────────────────────
@@ -105,9 +106,23 @@ export function useAppData(userId) {
         created_at: new Date().toLocaleDateString('pt-BR'),
       }
       setOrders(prev => [newOrder, ...prev])
+      // Envia resumo do pedido via WhatsApp (modo demo também)
+      const contact = typeof contactId === 'object' ? contactId : contacts.find(c => c.id === contactId)
+      if (contact?.phone) {
+        const total = items.reduce((a, i) => a + i.price * i.qty, 0)
+        sendText(contact.phone, formatOrderMsg(contact, items, total, opts)).catch(() => {})
+      }
       return { data: newOrder }
     }
-    return sbOrders.create(userId, contactId, items, opts)
+    const { data: order, error } = await sbOrders.create(userId, contactId, items, opts)
+    if (!error && order) {
+      const contact = typeof contactId === 'object' ? contactId : contacts.find(c => c.id === contactId)
+      if (contact?.phone) {
+        const total = items.reduce((a, i) => a + i.price * i.qty, 0)
+        sendText(contact.phone, formatOrderMsg(contact, items, total, opts)).catch(() => {})
+      }
+    }
+    return { data: order, error }
   }, [isDemo, userId, orders, contacts])
 
   // Add new contact (real users: Supabase insert; demo: local state)
@@ -143,12 +158,51 @@ export function useAppData(userId) {
     if (!isDemo) await sbContacts.update(contactId, { stage })
   }, [isDemo])
 
+
+  // ── Envia mensagem via WhatsApp (Evolution API) + salva no Supabase ──────────
+  const sendWhatsAppMessage = useCallback(async (contactId, text, phone) => {
+    if (phone) sendText(phone, text).catch(() => {})
+    if (!isDemo && userId) {
+      try {
+        const { data: conv } = await sbConv.findOrCreate(userId, contactId)
+        if (conv?.id) await sbConv.sendMessage(conv.id, userId, text)
+      } catch (_) {}
+    }
+  }, [isDemo, userId])
+
+  // ── Subscreve mensagens recebidas de um contato via Supabase Realtime ────────
+  const subscribeToContactMessages = useCallback((contactId, onMsg) => {
+    if (isDemo || !userId) return null
+    let channel = null
+    sbConv.findOrCreate(userId, contactId).then(({ data: conv }) => {
+      if (!conv?.id) return
+      channel = supabase
+        .channel(`msgs-${conv.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'messages',
+          filter: `conversation_id=eq.${conv.id}`,
+        }, ({ new: msg }) => {
+          if (msg.from_role !== 'rep') {
+            onMsg({
+              from: 'c',
+              text: msg.text,
+              time: new Date(msg.created_at)
+                .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            })
+          }
+        })
+        .subscribe()
+    })
+    return { unsubscribe: () => channel?.unsubscribe() }
+  }, [isDemo, userId])
+
   return {
     loading, contacts, products, categories, promotions, combos,
     orders, quotes, visits, messages, stats: MOCK.stats,
     monthData: MOCK.monthData, weekData: MOCK.weekData,
     paymentTerms: MOCK.payment_terms, deliveryOptions: MOCK.delivery_options,
     addMessage, createOrder, updateContactStage, addContact,
+    sendWhatsAppMessage, subscribeToContactMessages,
   }
 }
 
