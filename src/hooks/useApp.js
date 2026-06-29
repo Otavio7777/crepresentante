@@ -110,6 +110,33 @@ export function useAppData(userId) {
     return sbOrders.create(userId, contactId, items, opts)
   }, [isDemo, userId, orders, contacts])
 
+  // Add new contact (real users: Supabase insert; demo: local state)
+  const addContact = useCallback(async (contactData) => {
+    const av = (contactData.name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
+    const newContact = {
+      id: `c_${Date.now()}`,
+      av, stage:'prospect', tags:[], pipeline_value:0, unread:0,
+      last_contact_at: new Date().toLocaleDateString('pt-BR'),
+      notes:'',
+      ...contactData,
+    }
+    setContacts(prev => [newContact, ...prev])
+    if (!isDemo) {
+      const { data: saved } = await sbContacts.create({
+        user_id:   userId,
+        name:      contactData.name       || '',
+        company:   contactData.company    || '',
+        phone:     contactData.phone      || '',
+        email:     contactData.email      || '',
+        city:      contactData.city       || '',
+        job_title: contactData.job_title  || '',
+        stage:     'prospect',
+      })
+      if (saved) setContacts(prev => prev.map(c => c.id===newContact.id ? normalizeContact(saved) : c))
+    }
+    return newContact
+  }, [isDemo, userId])
+
   // Update contact stage
   const updateContactStage = useCallback(async (contactId, stage) => {
     setContacts(prev => prev.map(c => c.id===contactId ? { ...c, stage } : c))
@@ -121,7 +148,7 @@ export function useAppData(userId) {
     orders, quotes, visits, messages, stats: MOCK.stats,
     monthData: MOCK.monthData, weekData: MOCK.weekData,
     paymentTerms: MOCK.payment_terms, deliveryOptions: MOCK.delivery_options,
-    addMessage, createOrder, updateContactStage,
+    addMessage, createOrder, updateContactStage, addContact,
   }
 }
 
